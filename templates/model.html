@@ -1,0 +1,40 @@
+{% extends "layout.html" %}
+
+{% block body %}
+	
+	<div class="content">
+		<h1>
+			{% if prediction %}
+			Using {{ n_neighb }} Neighbors, a flower with:<br><br>
+			sepal width = {{ sepal_width }}<br>
+			sepal length = {{ sepal_length }}<br>
+			petal width = {{ petal_width }}<br>
+			petal length = {{ petal_length }}<br>
+			<br>
+			Is a {{ prediction }}.
+			{% else %}
+				Please fill out the form below! 
+			{% endif %}
+		</h1>
+	</div>
+
+	{% block page_content %}
+	<div class="content">
+		<form method="POST">
+			{{ form.n_neighb.label }} {{ form.n_neighb() }}
+			<br>
+			{{ form.sepal_length.label }} {{ form.sepal_length() }}
+			<br>
+			{{ form.sepal_width.label }} {{ form.sepal_width() }}
+			<br>
+			{{ form.petal_length.label }} {{ form.petal_length() }}
+			<br>
+			{{ form.petal_width.label }} {{ form.petal_width() }}
+			<br>
+			<br>
+			{{ form.submit() }}
+		</form>
+	</div>
+	{% endblock %}
+
+{% endblock %}
