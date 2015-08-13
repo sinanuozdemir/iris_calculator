@@ -1,1 +1,1 @@
-web: gunicorn knn_test:app
+web: gunicorn knn_test:app --log-file=-
