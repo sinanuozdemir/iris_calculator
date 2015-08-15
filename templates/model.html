@@ -5,13 +5,8 @@
 	<div class="content">
 		<h1>
 			{% if prediction %}
-			Using {{ n_neighb }} Neighbors, a flower with:<br><br>
-			Sepal Length: {{ sepal_length }}<br>
-			Sepal Width: {{ sepal_width }}<br>
-			Petal Length: {{ petal_length }}<br>
-			Petal Width: {{ petal_width }}<br>
 			<br>
-			Is a {{ prediction }}.
+			OMG It is a {{ prediction }}.
 			{% else %}
 				Please fill out the form below! 
 			{% endif %}
@@ -21,18 +16,30 @@
 	{% block page_content %}
 	<div class="content">
 		<form method="POST">
-			{{ form.n_neighb.label }} {{ form.n_neighb() }}
+			{{ train_form.n_neighb.label }} {{ train_form.n_neighb() }}
 			<br>
-			{{ form.sepal_length.label }} {{ form.sepal_length() }}
+			{{ train_form.param_2.label }} {{ train_form.param_2() }}
 			<br>
-			{{ form.sepal_width.label }} {{ form.sepal_width() }}
+			{{ train_form.param_3.label }} {{ train_form.param_3() }}
 			<br>
-			{{ form.petal_length.label }} {{ form.petal_length() }}
-			<br>
-			{{ form.petal_width.label }} {{ form.petal_width() }}
+			{{ train_form.param_4.label }} {{ train_form.param_4() }}
 			<br>
 			<br>
-			{{ form.submit() }}
+			{{ train_form.submit() }}
+		</form>
+	</div>
+	<div class="content">
+		<form method="POST">
+			{{ predict_form.sepal_length.label }} {{ predict_form.sepal_length() }}
+			<br>
+			{{ predict_form.sepal_width.label }} {{ predict_form.sepal_width() }}
+			<br>
+			{{ predict_form.petal_length.label }} {{ predict_form.petal_length() }}
+			<br>
+			{{ predict_form.petal_width.label }} {{ predict_form.petal_width() }}
+			<br>
+			<br>
+			{{ predict_form.submit() }}
 		</form>
 	</div>
 	{% endblock %}
