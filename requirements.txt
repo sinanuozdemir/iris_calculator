@@ -1,7 +1,7 @@
 Flask==0.10
 Jinja2==2.6
 gunicorn==19.1.1
-flask_bootstrap==3.3.5.6
+Flask-Bootstrap==3.3.5.6
 wtforms==2.0.2
 numpy==1.8.1
 scikit-learn==0.15.2
