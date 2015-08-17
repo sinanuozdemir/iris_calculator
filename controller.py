@@ -28,9 +28,9 @@ class PredictForm(Form):
 # this will take in the form data on the front end and train the model and store it in the model folder!
 class TrainForm(Form):
 	n_neighb = SelectField('Number of Neighbors:', choices=[(2,2),(3,3),(4,4),(5,5),(6,6)],coerce=int)
-	param_2 = DecimalField('Paramter 2 (Optional)', places = 2, validators=[Optional()])
-	param_3 = DecimalField('Paramter 3 (Optional)', places = 2, validators=[Optional()])
-	param_4 = DecimalField('Paramter 4 (Optional)', places = 2, validators=[Optional()])
+	param_2 = DecimalField('Parameter 2 (Optional)', places = 2, validators=[Optional()])
+	param_3 = DecimalField('Parameter 3 (Optional)', places = 2, validators=[Optional()])
+	param_4 = DecimalField('Parameter 4 (Optional)', places = 2, validators=[Optional()])
 	submit = SubmitField('Submit')
 
 
@@ -41,7 +41,7 @@ def model():
 	train_form = TrainForm(csrf_enabled=False)
 	predict_form = PredictForm(csrf_enabled=False)
 
-	
+
 
 													######################
 													# Training The Model #
