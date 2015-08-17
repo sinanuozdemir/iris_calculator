@@ -36,37 +36,67 @@ class TrainForm(Form):
 
 @app.route('/',methods=['GET', 'POST'])
 def model():
-	#Load Iris Data
-	iris_data = load_iris()
-	features = iris_data.data
-	feature_names = iris_data.feature_names
-	target = iris_data.target
-	target_names = iris_data.target_names
+	
 	prediction, sepal_length, sepal_width, petal_length, petal_width, n_neighb  = None, None, None, None, None, None
 	train_form = TrainForm(csrf_enabled=False)
 	predict_form = PredictForm(csrf_enabled=False)
+
+
+													######################
+													# Training The Model #
+													######################
+
 	if train_form.validate_on_submit():
+
 		# store the submitted values
 		submitted_data = train_form.data
 		print submitted_data
 
 
-
 		#Retrieve values from form
 		n_neighb = submitted_data['n_neighb']
 		param_2 = submitted_data['param_2']
-		# notice I'm using the same names I used in my TrainForm class up there!!!! On line 27
-		
+		param_3 = submitted_data['param_3']
+		param_4 = submitted_data['param_4']
+		# notice I'm using the same names I used in my TrainForm class up there!!!! On line 29
 
-		# lin_reg = LinearRegression()
-		# print lin_reg
 
-		knn = KNeighborsClassifier(n_neighbors = n_neighb)
+														######
+														# ML #
+														######
+		#Load Iris Data
+		iris_data = load_iris()
+		features = iris_data.data
+		feature_names = iris_data.feature_names
+		target = iris_data.target
+		target_names = iris_data.target_names
+
+
+		knn = KNeighborsClassifier(n_neighbors = n_neighb)    # replace with your own ML model here!!!!!
 		knn.fit(features, target)
-		with open('model/my_model.pkl', 'wb') as f:
+
+													############
+													# Pickling #
+													############
+		with open('model/my_model.pkl', 'wb') as f:           
 			pickle.dump(knn, f)
-		print "Trained"
+
+
+
+
+		print "Trained"										  # output to tell us we are done
+
+
+
+
+
+
+													##############
+													# Predicting #
+													##############
+
 	elif predict_form.validate_on_submit():
+
 		# store the submitted values
 		submitted_data = predict_form.data
 		print submitted_data
@@ -76,7 +106,7 @@ def model():
 		sepal_width = submitted_data['sepal_width']
 		petal_length = submitted_data['petal_length']
 		petal_width = submitted_data['petal_width']
-		# notice I'm using the same names I used in my PredictForm class up there!!!! On line 18
+		# notice I'm using the same names I used in my PredictForm class up there!!!! On line 20
 
 		#Create array from values
 		flower_instance = [sepal_length, sepal_width, petal_length, petal_width]
@@ -88,8 +118,15 @@ def model():
 		my_prediction = knn.predict(flower_instance)
 
 
+		# need to get the target_names again!
+		iris_data = load_iris()
+		target_names = iris_data.target_names
+		# so our output is pretty
+
 		# Return only the Predicted iris species
 		prediction = target_names[my_prediction][0].capitalize()
+		# This variable ends up getting put in bold on the front end!
+		# When you insert your own ML model, make sure your output is called "prediction"
 
 
 	return render_template(
@@ -97,6 +134,11 @@ def model():
 		predict_form=predict_form, 
 		train_form = train_form, 
 		prediction=prediction)
+
+
+
+
+
 
 #Handle Bad Requests
 @app.errorhandler(404)
