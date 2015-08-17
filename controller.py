@@ -41,6 +41,7 @@ def model():
 	train_form = TrainForm(csrf_enabled=False)
 	predict_form = PredictForm(csrf_enabled=False)
 
+	
 
 													######################
 													# Training The Model #
