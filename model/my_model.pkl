@@ -12,7 +12,7 @@ Rp4
 (dp5
 S'n_neighbors'
 p6
-I2
+I6
 sS'_y'
 p7
 cnumpy.core.multiarray
