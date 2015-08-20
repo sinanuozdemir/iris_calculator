@@ -71,7 +71,7 @@ def display(dict_of_df):
 		chosen[m['pos']] += 1
 	picks = {}
 	urgency = {}
-	for pos in ['QB', 'RB', 'WR', 'TE', 'K', 'DEF']:
+	for pos in ['QB', 'RB', 'WR', 'TE']:
 		if left[pos] > 0:
 			short = dict_of_df[pos].sort_index(by = 'distance', ascending = False).head(7)
 			std_ = np.std(list(dict_of_df[pos].sort_index(by = 'distance', ascending = False).head(10)['distance']))
