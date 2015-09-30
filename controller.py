@@ -10,6 +10,10 @@ from flask.ext.wtf import Form
 from wtforms import IntegerField, StringField, SubmitField, SelectField, DecimalField
 from wtforms.validators import Required, Optional
 
+import sys
+reload(sys)
+sys.setdefaultencoding("utf-8")
+
 #Initialize Flask App
 app = Flask(__name__)
 

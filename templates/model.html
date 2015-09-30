@@ -14,10 +14,11 @@
 	<div class="content">
 
 	{% if keywords %}
-	Using {{keywords}} I got <Br>
+	By looking at indeed and using the following keywords: {{keywords}} I got <Br><br>
 
 	{% for posting in results %}
-	{{posting.description}}<br>
+	<b>{{posting.title}} </b><br> Posted on: <B>{{posting.date_posted}} </b> <br>
+	{{posting.description}}<br><br>
 	{% endfor %}
 
 <br>
