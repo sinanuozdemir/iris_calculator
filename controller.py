@@ -2,41 +2,23 @@ import operator
 import numpy as np
 import json
 import sqlite3
-import ff_work
+from artichoke import UpworkScraper, IndeedScraper
+from keywords import getKeyWords
 from flask import Flask, render_template, g, redirect, url_for
 from flask_bootstrap import Bootstrap
 from flask.ext.wtf import Form
 from wtforms import IntegerField, StringField, SubmitField, SelectField, DecimalField
 from wtforms.validators import Required, Optional
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.linear_model import LinearRegression
-from sklearn.datasets import load_iris
-import pickle
 
 #Initialize Flask App
 app = Flask(__name__)
-dict_of_df = pickle.load(open('nfl_model.pkl', 'r'))
-names = []
-for pos, df in dict_of_df.items():
-	names += list(df['Name']+' / ' + df['Pos'])
-names = [(n, n) for n in names]
 
 def get_db():
-	DATABASE = 'kickass_db.db'
+	DATABASE = 'artichoke.db'
 	db = getattr(g, 'db', None)
 	if db is None:
 		db = g.db = sqlite3.connect(DATABASE)
 	return db
-
-def getUpToDate():
-	dict_of_df = pickle.load(open('nfl_model.pkl', 'r'))
-	cur = get_db().cursor()
-	for name, pos, mine in cur.execute(''' select * from pick '''):
-		print name, pos, mine
-		ff_work.removePlayerFromPos(dict_of_df, name, pos)
-	return ff_work.calculateImportances(dict_of_df)
-
-
 
 def init_db():
 	db = get_db()
@@ -72,11 +54,12 @@ def display(dict_of_df):
 	picks = {}
 	urgency = {}
 	for pos in ['QB', 'RB', 'WR', 'TE']:
-		if left[pos] > 0:
-			short = dict_of_df[pos].sort_index(by = 'distance', ascending = False).head(7)
-			std_ = np.std(list(dict_of_df[pos].sort_index(by = 'distance', ascending = False).head(10)['distance']))
-			urgency[pos] = round(std_ * (1 - (chosen[pos] / float(allowed[pos]))), 2)
-			picks[pos] = list(short['Name'] + ' / ' + short['distance'].astype(str))
+		short = dict_of_df[pos].sort_index(by = 'distance', ascending = False).head(7)
+		std_ = np.std(list(dict_of_df[pos].sort_index(by = 'distance', ascending = False).head(10)['distance']))
+		
+		urgency[pos] = round(std_, 3)
+		# urgency[pos] = round(std_ / (1 - (chosen[pos] / float(allowed[pos]))), 3)
+		picks[pos] = list(short['Name'] + ' / ' + short['distance'].astype(str))
 	picks['mine'] = mine
 	picks['left'] = left
 	picks['chosen'] = chosen
@@ -87,17 +70,8 @@ def display(dict_of_df):
 
 
 
-class PickForm(Form):
-	name = SelectField('Name', choices=names)
-	submit = SubmitField('Submit')
-	mine = SelectField('Name', choices=[('f', 'NOT MINE'), ('t', 'MINE')])
-
-
-
-
-# this will take in the form data on the front end and train the model and store it in the model folder!
-class TrainForm(Form):
-	write = DecimalField('write any number in here to refresh', places=2, validators=[Required()])
+class SearchForm(Form):
+	keywords = StringField('Submit')
 	submit = SubmitField('Submit')
 
 
@@ -106,40 +80,30 @@ class TrainForm(Form):
 @app.route('/',methods=['GET', 'POST'])
 def model():
 
-	dict_of_df = getUpToDate()
-
-	train_form = TrainForm(csrf_enabled=False)
-	pick_form = PickForm(csrf_enabled=False)
-	picks = display(dict_of_df)
-
-	if train_form.validate_on_submit():
+	search_form = SearchForm(csrf_enabled=False)
+	keywords = None
+	results = None
+	new_keywords = None
+	if search_form.validate_on_submit():
 		init_db()
 		# store the submitted values
-		submitted_data = train_form.data
-		# ff_work.gatherStats()
-		dict_of_df = pickle.load(open('nfl_model_backup.pkl', 'r'))
-
-
-		return redirect('/')
+		submitted_data = search_form.data
+		keywords = submitted_data.get('keywords', '')
+		if len(keywords):
+			results = IndeedScraper('baltimore').get_postings(keywords, pages=1)
+			if len(results):
+				texts = [posting['description'] for posting in results]
+				new_keywords = getKeyWords(texts)
+				print new_keywords
 
 	
 
-	elif pick_form.validate_on_submit():
-		db = get_db()
-		cur = db.cursor()
-		# store the submitted values
-		submitted_data = pick_form.data
-		name, pos = submitted_data['name'].split(' / ')
-		mine = submitted_data.get('mine', 'f')
-		insert('pick', ['name', 'pos', 'mine'], [name.lower(), pos, mine])
-		return redirect('/')
-
-
 	return render_template(
 		'model.html',
-		pick_form=pick_form, 
-		train_form = train_form,
-		picks = picks)
+		search_form = search_form,
+		new_keywords = new_keywords,
+		results = results,
+		keywords = keywords)
 
 
 
