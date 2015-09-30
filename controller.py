@@ -97,7 +97,8 @@ def model():
 			results = IndeedScraper('baltimore').get_postings(keywords, pages=1)
 			if len(results):
 				texts = [posting['description'] for posting in results]
-				new_keywords = getKeyWords(texts)
+				new_keywords = list(getKeyWords(texts))
+				new_keywords = ',  '.join(new_keywords)
 				print new_keywords
 
 	

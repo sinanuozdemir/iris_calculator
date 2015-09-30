@@ -11,7 +11,7 @@
 			{{ search_form.submit() }}
 		</form>
 	</div>
-	<div class="content">
+<div align="left">
 
 	{% if keywords %}
 	By looking at indeed and using the following keywords: {{keywords}} I got <Br><br>
@@ -20,11 +20,11 @@
 	<b>{{posting.title}} </b><br> Posted on: <B>{{posting.date_posted}} </b> <br>
 	{{posting.description}}<br><br>
 	{% endfor %}
-
+</div>
 <br>
 	AND
 <br><br>
-	These new keywords<br> {{new_keywords}}
+	After analyzing the first page of indeed for posts, I have discovered the following keywords that I think are highly relevant to the massage therapist looking for work.<br><br> {{new_keywords}}
 	{% endif %}
 	</div>
 	{% endblock %}
