@@ -32,15 +32,15 @@ def insert():
 	p = models.Visit(**request.form)
 	db.session.add(p)
 	db.session.commit()
-	print p.id
 	return jsonify(**{'status':'success', 'visit id':str(p.id)})
 
 
 
 @application.route('/test',methods=['GET', 'POST'])
 def model():
+	print db.session.query(models.Visit).count()
 	return render_template(
-		'model.html',
+		'model.html'
 		)
 
 
