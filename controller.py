@@ -13,6 +13,7 @@ def insert():
 	if request.method == 'POST':
 		try:
 			p = models.Visit(**request.form)
+			print p.id
 			db.session.add(p)
 			db.session.commit()
 		except Exception as e:
@@ -24,6 +25,7 @@ def insert():
 
 @application.route('/test',methods=['GET', 'POST'])
 def model():
+	print db.session.query(models.Visit).count()
 	return render_template('model.html')
 
 #Handle Bad Requests
