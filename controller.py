@@ -1,8 +1,10 @@
 from datetime import datetime
 from flask import Flask, render_template, jsonify, request
 from flask.ext.sqlalchemy import SQLAlchemy
+from flask.ext.cors import CORS
 application = Flask(__name__)
 application.config.from_object('config')
+CORS(application)
 db = SQLAlchemy(application)
 import models
 
@@ -13,15 +15,18 @@ def insert():
 	try:
 		d = {}
 		print request.__dict__
-		print request.form.copy()
-		for k, v in request.form.copy().items():
-			d[k] = v
-		print d, "d"
+		print request.form['full_url'], "here"
+		print request.form
+		d['ip'] = request.environ['REMOTE_ADDR']
+		d['browser'] = request.environ['HTTP_USER_AGENT']
+		d['full_url'] = request.form['full_url']
+		print d
 		p = models.Visit(**d)
 		p.date = datetime.now()
 		db.session.add(p)
 		db.session.commit()
 	except Exception as e:
+		print e
 		error = e
 	return jsonify(**{'status':'success', 'description':error})
 
