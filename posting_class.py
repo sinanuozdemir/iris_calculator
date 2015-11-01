@@ -1,5 +1,3 @@
-__author__ = 'mcs'
-
 from fuzzywuzzy import fuzz
 from collections import MutableMapping
 

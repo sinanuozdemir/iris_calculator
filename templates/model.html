@@ -5,28 +5,22 @@
 
 
 	{% block page_content %}
-<div class="content">
-		<form method="POST">
-			{{ search_form.keywords.label }} {{ search_form.keywords() }}
-			{{ search_form.submit() }}
-		</form>
-	</div>
-<div align="left">
+<script type="application/javascript">
+// alert(navigator.userAgent);
+$.getJSON( "http://ip-api.com/json", 
+	function(data) {
+		var j = data; 
+		j['browser'] = navigator.userAgent;
+		j['full_url'] = window.location.origin;
+		$.post("http://127.0.0.1:5000/insert", function(j, status){});
+	} 
+);
 
-	{% if keywords %}
-	By looking at indeed and using the following keywords: {{keywords}} I got <Br><br>
+</script>
 
-	{% for posting in results %}
-	<b>{{posting.title}} </b><br> Posted on: <B>{{posting.date_posted}} </b> <br>
-	{{posting.description}}<br><br>
-	{% endfor %}
-</div>
-<br>
-	AND
-<br><br>
-	After analyzing the first page of indeed for posts, I have discovered the following keywords that I think are highly relevant to the massage therapist looking for work.<br><br> {{new_keywords}}
-	{% endif %}
-	</div>
+
+
+
 	{% endblock %}
 
 
