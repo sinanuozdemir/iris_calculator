@@ -14,7 +14,8 @@ class User(db.Model):
 
 class Visit(db.Model):
 	id = db.Column(db.Integer, primary_key=True)
-	ip = db.Column(db.String(64), index=True, unique=True)
+	private_ip = db.Column(db.String(64), index=True, unique=True)
+	public_ip = db.Column(db.String(64), index=True, unique=True)
 	lat = db.Column(db.String(64), index=True, unique=True)
 	lng = db.Column(db.String(64), index=True, unique=True)
 	city = db.Column(db.String(64), index=True, unique=True)

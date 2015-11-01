@@ -17,9 +17,10 @@ def insert():
 		print request.__dict__
 		print request.form['full_url'], "here"
 		print request.form
-		d['ip'] = request.environ['REMOTE_ADDR']
-		d['browser'] = request.environ['HTTP_USER_AGENT']
-		d['full_url'] = request.form['full_url']
+		d['private_ip'] = request.environ.get('REMOTE_ADDR')
+		d['public_ip'] = request.environ.get('HTTP_X_FORWARDED_FOR')
+		d['browser'] = request.environ.get('HTTP_USER_AGENT')
+		d['full_url'] = request.form.get('full_url')
 		print d
 		p = models.Visit(**d)
 		p.date = datetime.now()
