@@ -10,4 +10,3 @@ geocoder==1.5.0
 Flask-SQLAlchemy==2.0
 psycopg2==2.5.3
 Flask-Cors==2.1.0
-geocoder==1.5.0
