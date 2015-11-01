@@ -14,6 +14,7 @@ def insert():
 		d = {}
 		for k, v in request.form.copy().items():
 			d[k] = v
+		print d, "d"
 		p = models.Visit(**d)
 		p.date = datetime.now()
 		db.session.add(p)
