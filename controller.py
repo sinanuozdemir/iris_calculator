@@ -5,6 +5,7 @@ from flask.ext.cors import CORS
 application = Flask(__name__)
 application.config.from_object('config')
 CORS(application)
+from user_agents import parse
 db = SQLAlchemy(application)
 import models
 import geocoder
@@ -25,7 +26,11 @@ def insert():
 			d['lat'], d['lng'] = g.latlng
 			d['city'] = g.city
 			d['country'] = g.country
-		d['browser'] = request.environ.get('HTTP_USER_AGENT')
+		d['user_agent'] = request.environ.get('HTTP_USER_AGENT')
+		if d['user_agent']:
+			user_agent = parse(d['user_agent'])
+			d['browser'] = user_agent.browser.family
+			d['is_mobile'], d['is_tablet'], d['is_pc'] = user_agent.is_mobile, user_agent.is_tablet, user_agent.is_pc
 		d['full_url'] = request.form.get('full_url')
 		print d
 		p = models.Visit(**d)
