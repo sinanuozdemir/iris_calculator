@@ -12,6 +12,8 @@ def insert():
 	error = 'nothing more to see here'
 	try:
 		d = {}
+		print request.__dict__
+		print request.form.copy()
 		for k, v in request.form.copy().items():
 			d[k] = v
 		print d, "d"
