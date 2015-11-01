@@ -39,7 +39,7 @@ def insert():
 @application.route('/test',methods=['GET', 'POST'])
 def model():
 	print "hello"
-	print db.session.query(models.Visit).count()
+	# print db.session.query(models.Visit).count()
 	return render_template(
 		'model.html'
 		)
