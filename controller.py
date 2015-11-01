@@ -7,6 +7,7 @@ application.config.from_object('config')
 CORS(application)
 db = SQLAlchemy(application)
 import models
+import geocoder
 
 
 @application.route('/insert', methods=['POST'])
@@ -19,6 +20,11 @@ def insert():
 		print request.form
 		d['private_ip'] = request.environ.get('REMOTE_ADDR')
 		d['public_ip'] = request.environ.get('HTTP_X_FORWARDED_FOR')
+		if d['public_ip']:
+			g = geocoder.ip(d['public_ip'])
+			d['lat'], d['lng'] = g.latlng
+			d['city'] = g.city
+			d['country'] = g.country
 		d['browser'] = request.environ.get('HTTP_USER_AGENT')
 		d['full_url'] = request.form.get('full_url')
 		print d
