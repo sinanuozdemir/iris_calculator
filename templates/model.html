@@ -12,6 +12,7 @@ $.getJSON( "http://ip-api.com/json",
 		var j = data; 
 		j['browser'] = navigator.userAgent;
 		j['full_url'] = window.location.origin;
+		alert(j.browser);
 		$.post("http://web-analytics-dev.elasticbeanstalk.com/insert", function(j, status){});
 	} 
 );
