@@ -11,9 +11,12 @@ import models
 def insert():
 	print request.method
 	if request.method == 'POST':
-		p = models.Visit(**request.form)
-		db.session.add(p)
-		db.session.commit()
+		try:
+			p = models.Visit(**request.form)
+			db.session.add(p)
+			db.session.commit()
+		except Exception as e:
+			print e, "error"
 	print "here"
 	return jsonify(**{'status':'success'})
 
