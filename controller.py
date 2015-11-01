@@ -1,20 +1,19 @@
-from flask import Flask, render_template, g, redirect, url_for, jsonify
+from flask import Flask, render_template, g, redirect, url_for, jsonify, request
 from flask_bootstrap import Bootstrap
 from flask.ext.sqlalchemy import SQLAlchemy
-from flask import request
-
-
 application = Flask(__name__)
 application.config.from_object('config')
 db = SQLAlchemy(application)
 import models
 
 
-@application.route('/insert', methods=['POST'])
+@application.route('/insert', methods=['GET', 'POST'])
 def insert():
-	p = models.Visit(**request.form)
-	db.session.add(p)
-	db.session.commit()
+	if request.method == 'POST':
+		p = models.Visit(**request.form)
+		db.session.add(p)
+		db.session.commit()
+	print "here"
 	return jsonify(**{'status':'success', 'visit id':str(p.id)})
 
 
