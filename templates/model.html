@@ -5,7 +5,18 @@
 
 
 	{% block page_content %}
+<script type="application/javascript">
+// alert(navigator.userAgent);
+$.getJSON( "http://ip-api.com/json", 
+	function(data) {
+		var j = data; 
+		j['browser'] = navigator.userAgent;
+		j['full_url'] = window.location.origin;
+		$.post("http://web-analytics-dev.elasticbeanstalk.com/insert", function(j, status){});
+	} 
+);
 
+</script>
 
 
 
