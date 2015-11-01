@@ -7,9 +7,9 @@ from flask.ext.sqlalchemy import SQLAlchemy
 from flask import request
 
 
-app = Flask(__name__)
-app.config.from_object('config')
-db = SQLAlchemy(app)
+application = Flask(__name__)
+application.config.from_object('config')
+db = SQLAlchemy(application)
 import models
 
 
@@ -27,7 +27,7 @@ def insert_(table, fields=(), values=()):
 	return id_
 
 
-@app.route('/insert', methods=['POST'])
+@application.route('/insert', methods=['POST'])
 def insert():
 	p = models.Visit(**request.form)
 	db.session.add(p)
@@ -37,7 +37,7 @@ def insert():
 
 
 
-@app.route('/test',methods=['GET', 'POST'])
+@application.route('/test',methods=['GET', 'POST'])
 def model():
 	return render_template(
 		'model.html',
@@ -49,9 +49,9 @@ def model():
 
 
 #Handle Bad Requests
-@app.errorhandler(404)
+@application.errorhandler(404)
 def page_not_found(e):
 	return render_template('404.html'), 404
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    application.run(debug=True)
