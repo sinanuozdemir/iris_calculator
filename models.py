@@ -21,5 +21,6 @@ class Visit(db.Model):
 	country = db.Column(db.String(64), index=True, unique=True)
 	browser = db.Column(db.String(128), index=True, unique=True)
 	full_url = db.Column(db.String(1024), index=True, unique=True)
+	date = db.Column(db.DateTime())
 	def __repr__(self):
 		return '<Visit %r>' % (self.ip)
