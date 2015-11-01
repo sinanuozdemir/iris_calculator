@@ -9,12 +9,13 @@ import models
 
 @application.route('/insert', methods=['GET', 'POST'])
 def insert():
+	print request.method
 	if request.method == 'POST':
 		p = models.Visit(**request.form)
 		db.session.add(p)
 		db.session.commit()
 	print "here"
-	return jsonify(**{'status':'success', 'visit id':str(p.id)})
+	return jsonify(**{'status':'success'})
 
 
 
