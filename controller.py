@@ -17,8 +17,6 @@ def insert():
 	try:
 		d = {}
 		print request.__dict__
-		print request.form['full_url'], "here"
-		print request.form
 		d['private_ip'] = request.environ.get('REMOTE_ADDR')
 		d['public_ip'] = request.environ.get('HTTP_X_FORWARDED_FOR')
 		if d['public_ip']:
@@ -31,7 +29,8 @@ def insert():
 			user_agent = parse(d['user_agent'])
 			d['browser'] = user_agent.browser.family
 			d['is_bot'], d['is_mobile'], d['is_tablet'], d['is_pc'] = user_agent.is_bot, user_agent.is_mobile, user_agent.is_tablet, user_agent.is_pc
-		d['full_url'] = request.form.get('full_url')
+		d['full_url'] = request.environ.get('HTTP_ORIGIN')
+		d['secure'] = 'https://' in d['full_url']
 		print d
 		p = models.Visit(**d)
 		p.date = datetime.now()

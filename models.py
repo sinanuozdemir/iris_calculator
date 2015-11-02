@@ -22,6 +22,7 @@ class Visit(db.Model):
 	is_tablet = db.Column(db.Boolean, index=False, unique=False)
 	is_pc = db.Column(db.Boolean, index=False, unique=False)
 	is_bot = db.Column(db.Boolean, index=False, unique=False)
+	secure = db.Column(db.Boolean, index=False, unique=False)
 	city = db.Column(db.String(64), index=False, unique=False)
 	country = db.Column(db.String(64), index=False, unique=False)
 	browser = db.Column(db.String(1024), index=False, unique=True)
