@@ -30,7 +30,7 @@ def insert():
 		if d['user_agent']:
 			user_agent = parse(d['user_agent'])
 			d['browser'] = user_agent.browser.family
-			d['is_mobile'], d['is_tablet'], d['is_pc'] = user_agent.is_mobile, user_agent.is_tablet, user_agent.is_pc
+			d['is_bot'], d['is_mobile'], d['is_tablet'], d['is_pc'] = user_agent.is_bot, user_agent.is_mobile, user_agent.is_tablet, user_agent.is_pc
 		d['full_url'] = request.form.get('full_url')
 		print d
 		p = models.Visit(**d)
@@ -56,3 +56,26 @@ def page_not_found(e):
 
 if __name__ == '__main__':
     application.run(debug=True)
+
+
+
+'''
+   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+
+	<script type="application/javascript">
+	$(document).ready(function(){
+	var j = {"full_url":window.location.origin}; 
+			$.ajax({
+			  type: "POST",
+			  crossDomain: true,
+              // contentType: "application/json; charset=utf-8",
+              // dataType: "jsonp",
+			  url: "https://latracking.com/insert",
+			  data: j,
+			})
+	});
+		
+</script>
+'''
+
+
