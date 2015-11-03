@@ -5,16 +5,78 @@
 
 
 	{% block page_content %}
+	<script src="static/js/bootstrap.min.js"></script>
+    <script src="static/js/chart/Chart.min.js"></script>
+host:<br>
+<input type="text" id="host">
+<button type="button" id="b" onclick="getData()">Click Me!</button>
+
+<div class="container">
+      <div class="content">
+        <br />
+      </div>
+      <div class="row">
+        <div class="col-xs-11 col-sm-12 col-md-12 col-lg-10" id="canvas_holder">
+          <canvas id="canvas" height="100%" width="100%"></canvas>
+        </div>
+      </div>
+      <br />
+      <br />
+      <br />
+        <div class="container">
+          <p>
+          </p>
+        </div>
+    </div><!-- /.container -->
+
 <script type="application/javascript">
-var j = {"full_url":window.location.origin}; 
 $.ajax({
   type: "POST",
-  url: "http://web-analytics-dev.elasticbeanstalk.com/insert",
-  data: j,
+  url: "http://www.latracking.com/insert",
+  data: {},
 });
 </script>
 
+<script type="text/javascript">
 
+$(document).ready(function(){
+    $('#host').keypress(function(e){
+      if(e.keyCode==13)
+      $('#b').click();
+    });
+});
+    // This is the speed in which the loop occurs
+    loopSpeed = 5000
+    // Every loopSpeed milliseconds, get API data (randomized with Python)
+    // Then draw a bar graph with the data.
+    function getData() {
+    	var host = document.getElementById("host").value;
+      $.get( "/data/"+host, function( data ) {
+          drawChart(data)
+        });
+  }
+    
+    function drawChart(d) {
+      var data = {
+          labels: d.x,
+          datasets: [
+              {
+                  // label: "Random Months",
+                  // fillColor: "rgba(220,220,220,0.5)",
+                  // strokeColor: "rgba(220,220,220,0.8)",
+                  // highlightFill: "rgba(220,220,220,0.75)",
+                  // highlightStroke: "rgba(220,220,220,1)",
+                  data: d.y
+              }
+          ]
+      };
+      var ctx = document.getElementById("canvas").getContext("2d");
+      
+      new Chart(ctx).Bar(data, {
+          responsive : true
+      });
+    }
+    </script>
 
 
 	{% endblock %}

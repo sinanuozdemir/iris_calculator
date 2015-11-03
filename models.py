@@ -30,4 +30,4 @@ class Visit(db.Model):
 	full_url = db.Column(db.String(1024), index=False, unique=False)
 	date = db.Column(db.DateTime())
 	def __repr__(self):
-		return '<Visit %r>' % (self.ip)
+		return '<Visit %r>' % (self.public_ip)

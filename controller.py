@@ -1,5 +1,5 @@
 from datetime import datetime
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, Response
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.cors import CORS
 application = Flask(__name__)
@@ -9,6 +9,28 @@ from user_agents import parse
 db = SQLAlchemy(application)
 import models
 import geocoder
+from random import randint
+import json
+from datetime import datetime
+from collections import Counter
+
+@application.route("/data/<path:host>")
+def chart_data(host):
+	print host
+	data_set = map(lambda x: datetime.strftime(x[0], '%m-%d-%Y'), \
+		db.session.query(models.Visit).filter(models.Visit.full_url.ilike('%'+host+'%')).values('date'))
+	data_set = Counter(data_set)
+	x, y = data_set.keys(), data_set.values()
+	data = {}
+
+	data['x'] = x
+	data['y'] = y
+
+	js = json.dumps(data)
+
+	resp = Response(js, status=200, mimetype='application/json')
+
+	return resp
 
 
 @application.route('/insert', methods=['POST'])
