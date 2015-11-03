@@ -16,16 +16,17 @@ from collections import Counter
 
 @application.route("/data/<path:host>")
 def chart_data(host):
-	print host
-	data_set = map(lambda x: datetime.strftime(x[0], '%m-%d-%Y'), \
-		db.session.query(models.Visit).filter(models.Visit.full_url.ilike('%'+host+'%')).values('date'))
-	data_set = Counter(data_set)
-	x, y = data_set.keys(), data_set.values()
-	data = {}
-
-	data['x'] = x
-	data['y'] = y
-
+	data_set = db.session.query(models.Visit).filter(models.Visit.full_url.ilike('%'+host+'%')).values('date', 'browser')
+	browsers = []
+	dates = []
+	for d in data_set:
+		browsers.append(d[1])
+		dates.append(datetime.strftime(d[0], '%m-%d-%Y'))
+	data = {
+		'host':host,
+		'browsers': [{'label':k, 'y':v} for k, v in Counter(browsers).iteritems()],
+		'visits': [{'label':k, 'y':v} for k, v in Counter(dates).iteritems()]
+	}
 	js = json.dumps(data)
 
 	resp = Response(js, status=200, mimetype='application/json')

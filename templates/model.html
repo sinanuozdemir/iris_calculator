@@ -7,27 +7,59 @@
 	{% block page_content %}
 	<script src="static/js/bootstrap.min.js"></script>
     <script src="static/js/chart/Chart.min.js"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+<script type="text/javascript" src="static/js/jquery.easy-pie-chart.js"></script>
+
+<link rel="stylesheet"type="text/css" href="static/css/jquery.easy-pie-chart.css">
 host:<br>
 <input type="text" id="host">
+<input type="date" id="start_date" name="start_date">
 <button type="button" id="b" onclick="getData()">Click Me!</button>
+<script type="text/javascript" src="static/js/canvasjs.min.js"></script>
+<script type="text/javascript">
+  function drawPie(host, data) {
+    var chart = new CanvasJS.Chart("chartContainer", {
 
-<div class="container">
-      <div class="content">
-        <br />
-      </div>
-      <div class="row">
-        <div class="col-xs-11 col-sm-12 col-md-12 col-lg-10" id="canvas_holder">
-          <canvas id="canvas" height="100%" width="100%"></canvas>
-        </div>
-      </div>
-      <br />
-      <br />
-      <br />
-        <div class="container">
-          <p>
-          </p>
-        </div>
-    </div><!-- /.container -->
+      title:{
+        text: host
+      },
+      data: [
+        {
+         /*** Change type "column" to "bar", "area", "line" or "pie"***/
+         type: "pie",
+         dataPoints: data
+       }
+       ]
+     });
+    chart.render();
+  }
+</script>
+  <script type="text/javascript">
+  function drawBar(host, data) {
+    var chart2 = new CanvasJS.Chart("chartContainer2", {
+
+      title:{
+        text: host
+      },
+      data: [
+        {
+         /*** Change type "column" to "bar", "area", "line" or "pie"***/
+         type: "line",
+         dataPoints: data
+       }
+       ]
+     });
+    chart2.render();
+  }
+  </script>
+</head>
+<body>
+
+
+  <div id="chartContainer" style="height: 300px; width: 100%;"></div>
+
+  <div id="chartContainer2" style="height: 300px; width: 100%;"></div>
+
 
 <script type="application/javascript">
 $.ajax({
@@ -45,39 +77,14 @@ $(document).ready(function(){
       $('#b').click();
     });
 });
-    // This is the speed in which the loop occurs
-    loopSpeed = 5000
-    // Every loopSpeed milliseconds, get API data (randomized with Python)
-    // Then draw a bar graph with the data.
     function getData() {
     	var host = document.getElementById("host").value;
       $.get( "/data/"+host, function( data ) {
-          drawChart(data)
+          drawPie(data['host'], data['browsers']);
+          drawBar(data['host'], data['visits']);
         });
   }
-    
-    function drawChart(d) {
-      var data = {
-          labels: d.x,
-          datasets: [
-              {
-                  // label: "Random Months",
-                  // fillColor: "rgba(220,220,220,0.5)",
-                  // strokeColor: "rgba(220,220,220,0.8)",
-                  // highlightFill: "rgba(220,220,220,0.75)",
-                  // highlightStroke: "rgba(220,220,220,1)",
-                  data: d.y
-              }
-          ]
-      };
-      var ctx = document.getElementById("canvas").getContext("2d");
-      
-      new Chart(ctx).Bar(data, {
-          responsive : true
-      });
-    }
-    </script>
-
+  </script>
 
 	{% endblock %}
 
