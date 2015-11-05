@@ -52,7 +52,7 @@ def insert():
 			user_agent = parse(d['user_agent'])
 			d['browser'] = user_agent.browser.family
 			d['is_bot'], d['is_mobile'], d['is_tablet'], d['is_pc'] = user_agent.is_bot, user_agent.is_mobile, user_agent.is_tablet, user_agent.is_pc
-		d['full_url'] = request.environ.get('HTTP_ORIGIN')
+		d['full_url'] = request.environ.get('HTTP_REFERER')
 		d['secure'] = 'https://' in d['full_url']
 		print d
 		p = models.Visit(**d)
