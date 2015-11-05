@@ -25,6 +25,7 @@ class Visit(db.Model):
 	secure = db.Column(db.Boolean, index=False, unique=False)
 	city = db.Column(db.String(64), index=False, unique=False)
 	country = db.Column(db.String(64), index=False, unique=False)
+	state = db.Column(db.String(64), index=False, unique=False)
 	browser = db.Column(db.String(1024), index=False, unique=True)
 	user_agent = db.Column(db.String(1024), index=False, unique=False)
 	full_url = db.Column(db.String(1024), index=False, unique=False)

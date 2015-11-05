@@ -47,6 +47,7 @@ def insert():
 			d['lat'], d['lng'] = g.latlng
 			d['city'] = g.city
 			d['country'] = g.country
+			d['state'] = g.state
 		d['user_agent'] = request.environ.get('HTTP_USER_AGENT')
 		if d['user_agent']:
 			user_agent = parse(d['user_agent'])
