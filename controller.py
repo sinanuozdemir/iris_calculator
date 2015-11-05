@@ -25,7 +25,7 @@ def chart_data(host):
 	data = {
 		'host':host,
 		'browsers': [{'label':k, 'y':v} for k, v in Counter(browsers).iteritems()],
-		'visits': [{'label':k, 'y':v} for k, v in Counter(dates).iteritems()]
+		'visits': sorted([{'label':k, 'y':v} for k, v in Counter(dates).iteritems()], key = lambda x:x['label'])
 	}
 	js = json.dumps(data)
 
