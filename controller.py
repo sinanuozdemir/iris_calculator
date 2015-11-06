@@ -58,7 +58,8 @@ def insert():
 		d['full_url'] = request.environ.get('HTTP_REFERER')
 		ur = d['full_url'].replace('https://','').replace('http://','').replace('www.','')
 		if '/' not in ur: ur += '/'
-		d['base'], d['after'] = ur[:ur.index('/')], ur[ur.index('/')+1:]
+		base, d['after'] = ur[:ur.index('/')], ur[ur.index('/')+1:]
+		get_or_create(models.Website, base=base)
 		if len(d['after']) <= 1:
 			d['after'] = None
 		elif d['after'][-1] == '/':
@@ -80,24 +81,20 @@ def insert():
 		error = e
 	return jsonify(**{'status':'success', 'description':error})
 
+def get_or_create(model, **kwargs):
+    instance = db.session.query(model).filter_by(**kwargs).first()
+    if instance:
+        return instance
+    else:
+        instance = model(**kwargs)
+        db.session.add(instance)
+        db.session.commit()
+        return instance
 
 @application.route('/check',methods=['GET'])
 def check():
 	for v in db.session.query(models.Visit).all():
-		ur = v.full_url
-		ur = ur.replace('https://','').replace('http://','').replace('www.','')
-		if '/' not in ur: ur += '/'
-		v.base, v.after = ur[:ur.index('/')], ur[ur.index('/')+1:]
-		if len(v.after) <= 1:
-			v.after = None
-		elif v.after[-1] == '/':
-			v.after = v.after[:-1]
-		if '?' in ur:
-			if v.after:
-				v.after = v.after.split('?')[0]
-			v.gets = ur.split('?')[1]
-			if len(v.gets) <= 1:
-				v.gets = None
+		v.website_id = get_or_create(models.Website, base='legionanalytics.com')
 	db.session.commit()
 
 

@@ -10,6 +10,9 @@ class User(db.Model):
 	def __repr__(self):
 		return '<User %r>' % (self.nickname)
 
+class Website(db.Model):
+	id = db.Column(db.Integer, primary_key=True)
+	base = db.Column(db.String(1024), index=True, unique=True)
 
 
 class Visit(db.Model):
@@ -29,7 +32,8 @@ class Visit(db.Model):
 	browser = db.Column(db.String(1024), index=False, unique=True)
 	user_agent = db.Column(db.String(1024), index=False, unique=False)
 	full_url = db.Column(db.String(1024), index=False, unique=False)
-	base = db.Column(db.String(1024), index=False, unique=False)
+	website_id = db.Column(db.Integer, db.ForeignKey("Website.id"), nullable=False)
+	website = db.relationship('Website', backref='visits')
 	after = db.Column(db.String(1024), index=False, unique=False)
 	gets = db.Column(db.String(1024), index=False, unique=False)
 	date = db.Column(db.DateTime())
