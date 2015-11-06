@@ -59,7 +59,6 @@ def insert():
 		ur = d['full_url'].replace('https://','').replace('http://','').replace('www.','')
 		if '/' not in ur: ur += '/'
 		base, d['after'] = ur[:ur.index('/')], ur[ur.index('/')+1:]
-		get_or_create(models.Website, base=base)
 		if len(d['after']) <= 1:
 			d['after'] = None
 		elif d['after'][-1] == '/':
