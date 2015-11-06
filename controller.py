@@ -59,8 +59,12 @@ def insert():
 		ur = d['full_url'].replace('https://','').replace('http://','').replace('www.','')
 		if '/' not in ur: ur += '/'
 		d['base'], d['after'] = ur[:ur.index('/')], ur[ur.index('/'):]
+		if len(d['after']) <= 1:
+			d['after'] = None
 		if '?' in ur:
 			d['gets'] = ur.split('?')[1]
+		if len(d['gets']) <= 1:
+			d['gets'] = None
 		d['secure'] = 'https://' in d['full_url']
 		print d
 		p = models.Visit(**d)
