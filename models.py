@@ -2,6 +2,7 @@ from controller import db
 
 
 class User(db.Model):
+	__tablename__ = "user"
 	id = db.Column(db.Integer, primary_key=True)
 	nickname = db.Column(db.String(64), index=True, unique=True)
 	first_name = db.Column(db.String(64), index=True, unique=True)
@@ -11,12 +12,15 @@ class User(db.Model):
 		return '<User %r>' % (self.nickname)
 
 class Website(db.Model):
+	__tablename__ = "website"
 	id = db.Column(db.Integer, primary_key=True)
 	base = db.Column(db.String(1024), index=True, unique=True)
 	visit_id = db.Column(db.Integer, db.ForeignKey("visit.id"), nullable=False)
+	visits = db.relationship('visit', backref='visit')
 
 
 class Visit(db.Model):
+	__tablename__ = "visit"
 	id = db.Column(db.Integer, primary_key=True)
 	private_ip = db.Column(db.String(64), index=False, unique=False)
 	public_ip = db.Column(db.String(64), index=False, unique=False)
@@ -34,7 +38,7 @@ class Visit(db.Model):
 	user_agent = db.Column(db.String(1024), index=False, unique=False)
 	full_url = db.Column(db.String(1024), index=False, unique=False)
 	website_id = db.Column(db.Integer, db.ForeignKey("website.id"), nullable=False)
-	website = db.relationship('website', backref='visits')
+	
 	after = db.Column(db.String(1024), index=False, unique=False)
 	gets = db.Column(db.String(1024), index=False, unique=False)
 	date = db.Column(db.DateTime())
