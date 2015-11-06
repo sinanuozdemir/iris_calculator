@@ -58,10 +58,12 @@ def insert():
 		d['full_url'] = request.environ.get('HTTP_REFERER')
 		ur = d['full_url'].replace('https://','').replace('http://','').replace('www.','')
 		if '/' not in ur: ur += '/'
-		d['base'], d['after'] = ur[:ur.index('/')], ur[ur.index('/'):]
+		d['base'], d['after'] = ur[:ur.index('/')], ur[ur.index('/')+1:]
 		if len(d['after']) <= 1:
 			d['after'] = None
 		if '?' in ur:
+			if d['after']:
+				d['after'] = d['after'].split('?')[0]
 			d['gets'] = ur.split('?')[1]
 			if len(d['gets']) <= 1:
 				d['gets'] = None
