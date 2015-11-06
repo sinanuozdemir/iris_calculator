@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from flask import Flask, render_template, jsonify, request, Response
 from flask.ext.sqlalchemy import SQLAlchemy
@@ -33,6 +34,7 @@ def chart_data(host):
 
 	return resp
 
+website_re = re.compile("(https?://)(www.)?([^\.]+).\w+/?((\w+/?)*(\?[\w=]+)?)", re.IGNORECASE)
 
 @application.route('/insert', methods=['POST'])
 def insert():
@@ -54,6 +56,10 @@ def insert():
 			d['browser'] = user_agent.browser.family
 			d['is_bot'], d['is_mobile'], d['is_tablet'], d['is_pc'] = user_agent.is_bot, user_agent.is_mobile, user_agent.is_tablet, user_agent.is_pc
 		d['full_url'] = request.environ.get('HTTP_REFERER')
+		r = website_re.match(d['full_url'])
+		d['base'] = r.group(3)+r.group(4)
+		d['after'] = r.group(5)
+		d['gets'] = r.group(6)
 		d['secure'] = 'https://' in d['full_url']
 		print d
 		p = models.Visit(**d)

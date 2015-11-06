@@ -29,6 +29,9 @@ class Visit(db.Model):
 	browser = db.Column(db.String(1024), index=False, unique=True)
 	user_agent = db.Column(db.String(1024), index=False, unique=False)
 	full_url = db.Column(db.String(1024), index=False, unique=False)
+	base = db.Column(db.String(1024), index=False, unique=False)
+	after = db.Column(db.String(1024), index=False, unique=False)
+	gets = db.Column(db.String(1024), index=False, unique=False)
 	date = db.Column(db.DateTime())
 	def __repr__(self):
 		return '<Visit %r>' % (self.public_ip)
