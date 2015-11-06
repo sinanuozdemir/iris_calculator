@@ -61,6 +61,8 @@ def insert():
 		d['base'], d['after'] = ur[:ur.index('/')], ur[ur.index('/')+1:]
 		if len(d['after']) <= 1:
 			d['after'] = None
+		elif d['after'][-1] == '/':
+			d['after'] = d['after'][:-1]
 		if '?' in ur:
 			if d['after']:
 				d['after'] = d['after'].split('?')[0]
@@ -79,10 +81,28 @@ def insert():
 	return jsonify(**{'status':'success', 'description':error})
 
 
+@application.route('/check',methods=['GET'])
+def check():
+	for v in db.session.query(models.Visit).all():
+		ur = v.full_url
+		ur = ur.replace('https://','').replace('http://','').replace('www.','')
+		if '/' not in ur: ur += '/'
+		v.base, v.after = ur[:ur.index('/')], ur[ur.index('/')+1:]
+		if len(v.after) <= 1:
+			v.after = None
+		elif v.after[-1] == '/':
+			v.after = v.after[:-1]
+		if '?' in ur:
+			if v.after:
+				v.after = v.after.split('?')[0]
+			v.gets = ur.split('?')[1]
+			if len(v.gets) <= 1:
+				v.gets = None
+	db.session.commit()
+
 
 @application.route('/test',methods=['GET', 'POST'])
 def model():
-	print db.session.query(models.Visit).count()
 	return render_template('model.html')
 
 #Handle Bad Requests
@@ -92,26 +112,5 @@ def page_not_found(e):
 
 if __name__ == '__main__':
     application.run(debug=True)
-
-
-
-'''
-   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-
-	<script type="application/javascript">
-	$(document).ready(function(){
-	var j = {"full_url":window.location.origin}; 
-			$.ajax({
-			  type: "POST",
-			  crossDomain: true,
-              // contentType: "application/json; charset=utf-8",
-              // dataType: "jsonp",
-			  url: "https://latracking.com/insert",
-			  data: j,
-			})
-	});
-		
-</script>
-'''
 
 
