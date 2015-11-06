@@ -63,8 +63,8 @@ def insert():
 			d['after'] = None
 		if '?' in ur:
 			d['gets'] = ur.split('?')[1]
-		if len(d['gets']) <= 1:
-			d['gets'] = None
+			if len(d['gets']) <= 1:
+				d['gets'] = None
 		d['secure'] = 'https://' in d['full_url']
 		print d
 		p = models.Visit(**d)
