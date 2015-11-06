@@ -15,7 +15,7 @@ class Website(db.Model):
 	__tablename__ = "website"
 	id = db.Column(db.Integer, primary_key=True)
 	base = db.Column(db.String(1024), index=True, unique=True)
-	visit_id = db.Column(db.Integer, db.ForeignKey("visit.id"), nullable=False)
+	# visit_id = db.Column(db.Integer, db.ForeignKey("visit.id"), nullable=False)
 	visits = db.relationship('visit', backref='visit')
 
 
