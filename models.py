@@ -13,6 +13,7 @@ class User(db.Model):
 class Website(db.Model):
 	id = db.Column(db.Integer, primary_key=True)
 	base = db.Column(db.String(1024), index=True, unique=True)
+	visit_id = db.Column(db.Integer, db.ForeignKey("visit.id"), nullable=False)
 
 
 class Visit(db.Model):
@@ -32,8 +33,8 @@ class Visit(db.Model):
 	browser = db.Column(db.String(1024), index=False, unique=True)
 	user_agent = db.Column(db.String(1024), index=False, unique=False)
 	full_url = db.Column(db.String(1024), index=False, unique=False)
-	website_id = db.Column(db.Integer, db.ForeignKey("Website.id"), nullable=False)
-	website = db.relationship('Website', backref='visits')
+	website_id = db.Column(db.Integer, db.ForeignKey("website.id"), nullable=False)
+	website = db.relationship('website', backref='visits')
 	after = db.Column(db.String(1024), index=False, unique=False)
 	gets = db.Column(db.String(1024), index=False, unique=False)
 	date = db.Column(db.DateTime())
