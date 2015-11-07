@@ -18,6 +18,11 @@ from datetime import datetime
 from collections import Counter
 
 
+@application.route("/get_my_ip", methods=["GET"])
+def get_my_ip():
+    return jsonify({'ip': [request.environ.get('REMOTE_ADDR'), request.environ.get('HTTP_X_FORWARDED_FOR', None), request.access_route]}), 200
+
+
 @application.route("/data/<path:host>")
 def chart_data(host):
 	data_set = db.session.query(models.Visit).filter(models.Visit.full_url.ilike('%'+host+'%')).values('date', 'browser')
@@ -41,11 +46,10 @@ website_re = re.compile("(https?://)(www.)?([^\.]+).\w+/?((\w+/?)*(\?[\w=]+)?)",
 
 @application.route('/insert', methods=['GET', 'POST'])
 def insert():
-	error = 'nothing more to see here'
+	error = 'tracked visit. Nothing more to see here'
 	try:
 		d = {}
 		print request.__dict__
-		print request.remote_addr, "print request.remote_addr"
 		d['private_ip'] = request.environ.get('REMOTE_ADDR')
 		d['public_ip'] = request.environ.get('HTTP_X_FORWARDED_FOR')
 		if d['public_ip']:
@@ -60,7 +64,16 @@ def insert():
 			d['browser'] = user_agent.browser.family
 			d['is_bot'], d['is_mobile'], d['is_tablet'], d['is_pc'] = user_agent.is_bot, user_agent.is_mobile, user_agent.is_tablet, user_agent.is_pc
 		d['full_url'] = request.environ.get('HTTP_REFERER')
-		if d['full_url']:
+		d['website_id'] = 1
+		if request.args.get('emailid'):
+			d['email_id'] = db.session.query(models.Email).filter_by(emailid=request.args.get('emailid')).first()
+			if d['email_id']:
+				d['email_id'] = d['email_id'].id
+				d['website_id'] = 1
+				error = 'successfully tracked email'
+			else:
+				error = 'no such email found'
+		elif d['full_url']:
 			ur = d['full_url'].replace('https://','').replace('http://','').replace('www.','')
 			if '/' not in ur: ur += '/'
 			base, d['after'] = ur[:ur.index('/')], ur[ur.index('/')+1:]
@@ -77,9 +90,8 @@ def insert():
 				if len(d['gets']) <= 1:
 					d['gets'] = None
 			d['secure'] = 'https://' in d['full_url']
-		if request.args.get('emailid'):
-			d['email_id'] = get_or_create(models.Email, emailid = request.args.get('emailid')).id
-			d['website_id'] = 1
+		else:
+			error = 'no recognized action taken'
 		print d
 		p = models.Visit(**d)
 		p.date = datetime.now()
@@ -87,7 +99,7 @@ def insert():
 		db.session.commit()
 	except Exception as e:
 		print e
-		error = e
+		error = repr(e)
 	return jsonify(**{'status':'success', 'description':error})
 
 def get_or_create(model, **kwargs):
