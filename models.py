@@ -11,6 +11,7 @@ class App(db.Model):
 	website = relationship("Website", uselist=False, backref="app")
 	user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 	user = relationship("User", uselist=False, backref="app")
+	emails = relationship('Email', backref='app')
 	def __repr__(self):
 		return '<User %r>' % (self.nickname)
 
@@ -42,6 +43,7 @@ class Email(db.Model):
 	id = db.Column(db.Integer, primary_key=True)
 	emailid = db.Column(db.String(64), index=True, unique=True)
 	opens = relationship('Visit', backref='email')
+	app_id = db.Column(db.Integer, db.ForeignKey("app.id"), nullable=True)
 
 
 class Visit(db.Model):
@@ -61,7 +63,7 @@ class Visit(db.Model):
 	state = db.Column(db.String(64), index=False, unique=False)
 	browser = db.Column(db.String(1024), index=False, unique=True)
 	user_agent = db.Column(db.String(1024), index=False, unique=False)
-	full_url = db.Column(db.String(1024), index=False, unique=False)
+	full_url = db.Column(db.String(1024), index=False, unique=False, nullable = True)
 	website_id = db.Column(db.Integer, db.ForeignKey("website.id"), nullable=True)
 	email_id = db.Column(db.Integer, db.ForeignKey("email.id"), nullable=True)
 	after = db.Column(db.String(1024), index=False, unique=False)

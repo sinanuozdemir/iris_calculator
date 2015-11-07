@@ -45,6 +45,7 @@ def insert():
 	try:
 		d = {}
 		print request.__dict__
+		print request.remote_addr, "print request.remote_addr"
 		d['private_ip'] = request.environ.get('REMOTE_ADDR')
 		d['public_ip'] = request.environ.get('HTTP_X_FORWARDED_FOR')
 		if d['public_ip']:
@@ -59,23 +60,26 @@ def insert():
 			d['browser'] = user_agent.browser.family
 			d['is_bot'], d['is_mobile'], d['is_tablet'], d['is_pc'] = user_agent.is_bot, user_agent.is_mobile, user_agent.is_tablet, user_agent.is_pc
 		d['full_url'] = request.environ.get('HTTP_REFERER')
-		ur = d['full_url'].replace('https://','').replace('http://','').replace('www.','')
-		if '/' not in ur: ur += '/'
-		base, d['after'] = ur[:ur.index('/')], ur[ur.index('/')+1:]
-		d['website_id'] = get_or_create(models.Website, base = base).id
+		if d['full_url']:
+			ur = d['full_url'].replace('https://','').replace('http://','').replace('www.','')
+			if '/' not in ur: ur += '/'
+			base, d['after'] = ur[:ur.index('/')], ur[ur.index('/')+1:]
+			d['website_id'] = get_or_create(models.Website, base = base).id
+		
+			if len(d['after']) <= 1:
+				d['after'] = None
+			elif d['after'][-1] == '/':
+				d['after'] = d['after'][:-1]
+			if '?' in ur:
+				if d['after']:
+					d['after'] = d['after'].split('?')[0]
+				d['gets'] = ur.split('?')[1]
+				if len(d['gets']) <= 1:
+					d['gets'] = None
+			d['secure'] = 'https://' in d['full_url']
 		if request.args.get('emailid'):
 			d['email_id'] = get_or_create(models.Email, emailid = request.args.get('emailid')).id
-		if len(d['after']) <= 1:
-			d['after'] = None
-		elif d['after'][-1] == '/':
-			d['after'] = d['after'][:-1]
-		if '?' in ur:
-			if d['after']:
-				d['after'] = d['after'].split('?')[0]
-			d['gets'] = ur.split('?')[1]
-			if len(d['gets']) <= 1:
-				d['gets'] = None
-		d['secure'] = 'https://' in d['full_url']
+			d['website_id'] = 1
 		print d
 		p = models.Visit(**d)
 		p.date = datetime.now()
