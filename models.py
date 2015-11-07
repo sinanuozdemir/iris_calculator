@@ -41,7 +41,7 @@ class Email(db.Model):
 	__tablename__ = "email"
 	id = db.Column(db.Integer, primary_key=True)
 	emailid = db.Column(db.String(64), index=True, unique=True)
-	opens = relationship('Visit', backref='visit')
+	opens = relationship('Visit', backref='email')
 
 
 class Visit(db.Model):

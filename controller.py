@@ -7,8 +7,6 @@ from flask.ext.cors import CORS
 
 application = Flask(__name__)
 application.config.from_object('config')
-login_manager = LoginManager()
-login_manager.init_app(application)
 CORS(application)
 from user_agents import parse
 db = SQLAlchemy(application)
@@ -18,11 +16,6 @@ from random import randint
 import json
 from datetime import datetime
 from collections import Counter
-
-@login_manager.user_loader
-def load_user(id_):
-    return db.session.query(models.User).filter_by(id = id_).first()
-
 
 
 @application.route("/data/<path:host>")
