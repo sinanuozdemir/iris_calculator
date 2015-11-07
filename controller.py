@@ -75,12 +75,12 @@ def insert():
 			d['browser'] = user_agent.browser.family
 			d['is_bot'], d['is_mobile'], d['is_tablet'], d['is_pc'] = user_agent.is_bot, user_agent.is_mobile, user_agent.is_tablet, user_agent.is_pc
 		d['full_url'] = request.environ.get('HTTP_REFERER')
-		d['website_id'] = 1
+		# d['website_id'] = 1
 		if request.args.get('emailid'):
 			d['email_id'] = db.session.query(models.Email).filter_by(emailid=request.args.get('emailid')).first()
 			if d['email_id']:
 				d['email_id'] = d['email_id'].id
-				d['website_id'] = 1
+				# d['website_id'] = 1
 				error = 'successfully tracked email'
 			else:
 				error = 'no such email found'
