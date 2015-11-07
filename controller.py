@@ -64,6 +64,7 @@ def insert():
 		base, d['after'] = ur[:ur.index('/')], ur[ur.index('/')+1:]
 		d['website_id'] = get_or_create(models.Website, base = base).id
 		if request.args.get('emailid'):
+			print "EMAILID", request.args.get('emailid')
 			d['email_id'] = get_or_create(models.Email, emailid = request.args.get('emailid')).id
 		if len(d['after']) <= 1:
 			d['after'] = None
@@ -112,7 +113,8 @@ def check():
 	# db.session.add(a)
 	# db.session.commit()
 	# print load_user(2)
-	print db.session.query(models.Website).filter_by(**{'base':'legionanalytics.com'}).first()
+	# print db.session.query(models.Website).filter_by(**{'base':'legionanalytics.com'}).first()
+	print request.args.get('emailid')
 	# for w in db.session.query(models.Website).all():
 	# 	print w.visits, w
 
