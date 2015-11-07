@@ -20,7 +20,16 @@ from collections import Counter
 
 @application.route("/get_my_ip", methods=["GET"])
 def get_my_ip():
-    return jsonify({'ip': [request.environ.get('REMOTE_ADDR'), request.environ.get('HTTP_X_FORWARDED_FOR', None), request.access_route]}), 200
+	fwd = request.environ.get('HTTP_X_FORWARDED_FOR', None)
+	if fwd is None:
+		fwd = request.environ.get('REMOTE_ADDR')
+	# sometimes x-forwarded-for contains multiple addresses,
+	# actual client is first, rest are proxy
+	ip = fwd.split(',')[0]
+	if request.args.get('format') == 'json':
+		return jsonify(**{'ip': ip})
+	else:
+		return ip
 
 
 @application.route("/data/<path:host>")
@@ -51,7 +60,8 @@ def insert():
 		d = {}
 		print request.__dict__
 		d['private_ip'] = request.environ.get('REMOTE_ADDR')
-		d['public_ip'] = request.environ.get('HTTP_X_FORWARDED_FOR')
+		d['public_ip'] = request.environ.get('HTTP_X_FORWARDED_FOR', None)
+		print "IPPPPP", d
 		if d['public_ip']:
 			g = geocoder.ip(d['public_ip'])
 			d['lat'], d['lng'] = g.latlng
