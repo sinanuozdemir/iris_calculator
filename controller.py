@@ -1,10 +1,16 @@
 import re
 from datetime import datetime
-from flask import Flask, render_template, jsonify, request, Response
+from flask import Flask, render_template, jsonify, request, Response, redirect, abort
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.cors import CORS
+from flask.ext.login import LoginManager, UserMixin, current_user, login_user, logout_user
+from forms import LoginForm
+
+
 application = Flask(__name__)
 application.config.from_object('config')
+login_manager = LoginManager()
+login_manager.init_app(application)
 CORS(application)
 from user_agents import parse
 db = SQLAlchemy(application)
@@ -14,6 +20,12 @@ from random import randint
 import json
 from datetime import datetime
 from collections import Counter
+
+@login_manager.user_loader
+def load_user(id_):
+    return db.session.query(models.User).filter_by(id = id_).first()
+
+
 
 @application.route("/data/<path:host>")
 def chart_data(host):
@@ -60,6 +72,8 @@ def insert():
 		if '/' not in ur: ur += '/'
 		base, d['after'] = ur[:ur.index('/')], ur[ur.index('/')+1:]
 		d['website_id'] = get_or_create(models.Website, base = base).id
+		if request.args.get('emailid'):
+			d['email_id'] = get_or_create(models.Email, emailid = request.args.get('emailid')).id
 		if len(d['after']) <= 1:
 			d['after'] = None
 		elif d['after'][-1] == '/':
@@ -91,11 +105,25 @@ def get_or_create(model, **kwargs):
         db.session.commit()
         return instance
 
+def getUser(email):
+	return db.session.query(models.User).filter(models.User.email.like(email)).first()
+
+def getWebsite(base_):
+	return db.session.query(models.Website).filter(models.Website.base.like(base_)).first()
+
+
 @application.route('/check',methods=['GET'])
 def check():
-	for v in db.session.query(models.Visit).all():
-		v.website_id = get_or_create(models.Website, base='legionanalytics.com')
-	db.session.commit()
+	# u = models.User(email='sinan@legionanalytics.com')
+	# db.session.add(u)
+	# db.session.commit()
+	# a = models.App(user = getUser('sinan@legionanalytics.com'), website = getWebsite('legionanalytics.com'))
+	# db.session.add(a)
+	# db.session.commit()
+	# print load_user(2)
+	print db.session.query(models.Website).filter_by(**{'base':'legionanalytics.com'}).first()
+	# for w in db.session.query(models.Website).all():
+	# 	print w.visits, w
 
 
 @application.route('/test',methods=['GET', 'POST'])
@@ -106,6 +134,30 @@ def model():
 @application.errorhandler(404)
 def page_not_found(e):
 	return render_template('404.html'), 404
+
+
+@application.route('/login', methods=['GET', 'POST'])
+def login():
+	# Here we use a class of some kind to represent and validate our
+	# client-side form data. For example, WTForms is a library that will
+	# handle this for us, and we use a custom LoginForm to validate.
+	form = LoginForm()
+	if form.validate():
+		# Login and validate the user.
+		# user should be an instance of your `User` class
+		login_user(user)
+
+		next = request.args.get('next')
+		# next_is_valid should check if the user has valid
+		# permission to access the `next` url
+		if not next_is_valid(next):
+			return abort(400)
+
+		return redirect(next or flask.url_for('index'))
+	return render_template('login.html', form=form)
+
+
+
 
 if __name__ == '__main__':
     application.run(debug=True)

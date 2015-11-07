@@ -1,0 +1,54 @@
+{% extends "layout.html" %}
+
+{% block body %}
+
+
+
+	{% block page_content %}
+	<script src="static/js/bootstrap.min.js"></script>
+    <script src="static/js/chart/Chart.min.js"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+<script type="text/javascript" src="static/js/jquery.easy-pie-chart.js"></script>
+
+<link rel="stylesheet"type="text/css" href="static/css/jquery.easy-pie-chart.css">
+host:<br>
+
+</head>
+<body>
+
+
+  <div id="chartContainer" style="height: 300px; width: 100%;"></div>
+
+  <div id="chartContainer2" style="height: 300px; width: 100%;"></div>
+
+
+<script type="application/javascript">
+$.ajax({
+  type: "POST",
+  url: "https://www.latracking.com/insert",
+  data: {},
+});
+</script>
+
+<script type="text/javascript">
+
+$(document).ready(function(){
+    $('#host').keypress(function(e){
+      if(e.keyCode==13)
+      $('#b').click();
+    });
+});
+    function getData() {
+    	var host = document.getElementById("host").value;
+      $.get( "/data/"+host, function( data ) {
+          drawPie(data['host'], data['browsers']);
+          drawBar(data['host'], data['visits']);
+        });
+  }
+  </script>
+
+	{% endblock %}
+
+
+
+{% endblock %}

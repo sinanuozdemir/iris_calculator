@@ -2,22 +2,46 @@ from sqlalchemy.orm import relationship, sessionmaker, backref
 from controller import db
 
 
+
+class App(db.Model):
+	__tablename__ = "app"
+	id = db.Column(db.Integer, primary_key=True)
+	appid = db.Column(db.String(64), index=True, unique=True)
+	website_id = db.Column(db.Integer, db.ForeignKey("website.id"), nullable=False)
+	website = relationship("Website", uselist=False, backref="app")
+	user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+	user = relationship("User", uselist=False, backref="app")
+	def __repr__(self):
+		return '<User %r>' % (self.nickname)
+
+
+
 class User(db.Model):
 	__tablename__ = "user"
 	id = db.Column(db.Integer, primary_key=True)
+	apps_allowed = db.Column(db.Integer, default = 0)
 	nickname = db.Column(db.String(64), index=True, unique=True)
 	first_name = db.Column(db.String(64), index=True, unique=True)
 	email = db.Column(db.String(120), index=True, unique=True)
-
+	is_authenticated = db.Column(db.Boolean, index=False, unique=False)
+	is_active = db.Column(db.Boolean, index=False, unique=False)
+	is_anonymous = db.Column(db.Boolean, index=False, unique=False)
 	def __repr__(self):
 		return '<User %r>' % (self.nickname)
+	def get_id(self):
+		return str(self.id)
 
 class Website(db.Model):
 	__tablename__ = "website"
 	id = db.Column(db.Integer, primary_key=True)
 	base = db.Column(db.String(1024), index=True, unique=True)
-	# visit_id = db.Column(db.Integer, db.ForeignKey("visit.id"), nullable=False)
 	visits = relationship('Visit', backref='visit')
+
+class Email(db.Model):
+	__tablename__ = "email"
+	id = db.Column(db.Integer, primary_key=True)
+	emailid = db.Column(db.String(64), index=True, unique=True)
+	opens = relationship('Visit', backref='visit')
 
 
 class Visit(db.Model):
@@ -38,8 +62,8 @@ class Visit(db.Model):
 	browser = db.Column(db.String(1024), index=False, unique=True)
 	user_agent = db.Column(db.String(1024), index=False, unique=False)
 	full_url = db.Column(db.String(1024), index=False, unique=False)
-	website_id = db.Column(db.Integer, db.ForeignKey("website.id"), nullable=False)
-	
+	website_id = db.Column(db.Integer, db.ForeignKey("website.id"), nullable=True)
+	email_id = db.Column(db.Integer, db.ForeignKey("email.id"), nullable=True)
 	after = db.Column(db.String(1024), index=False, unique=False)
 	gets = db.Column(db.String(1024), index=False, unique=False)
 	date = db.Column(db.DateTime())
