@@ -11,3 +11,4 @@ Flask-SQLAlchemy==2.0
 psycopg2==2.5.3
 Flask-Cors==2.1.0
 user-agents==1.0.1
+Flask-Login==0.3.2
