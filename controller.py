@@ -39,7 +39,7 @@ def chart_data(host):
 
 website_re = re.compile("(https?://)(www.)?([^\.]+).\w+/?((\w+/?)*(\?[\w=]+)?)", re.IGNORECASE)
 
-@application.route('/insert', methods=['POST'])
+@application.route('/insert', methods=['GET', 'POST'])
 def insert():
 	error = 'nothing more to see here'
 	try:
@@ -64,7 +64,6 @@ def insert():
 		base, d['after'] = ur[:ur.index('/')], ur[ur.index('/')+1:]
 		d['website_id'] = get_or_create(models.Website, base = base).id
 		if request.args.get('emailid'):
-			print "EMAILID", request.args.get('emailid')
 			d['email_id'] = get_or_create(models.Email, emailid = request.args.get('emailid')).id
 		if len(d['after']) <= 1:
 			d['after'] = None
