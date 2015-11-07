@@ -3,8 +3,6 @@ from datetime import datetime
 from flask import Flask, render_template, jsonify, request, Response, redirect, abort
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.cors import CORS
-from flask.ext.login import LoginManager, UserMixin, current_user, login_user, logout_user
-from forms import LoginForm
 
 
 application = Flask(__name__)
@@ -134,27 +132,6 @@ def model():
 @application.errorhandler(404)
 def page_not_found(e):
 	return render_template('404.html'), 404
-
-
-@application.route('/login', methods=['GET', 'POST'])
-def login():
-	# Here we use a class of some kind to represent and validate our
-	# client-side form data. For example, WTForms is a library that will
-	# handle this for us, and we use a custom LoginForm to validate.
-	form = LoginForm()
-	if form.validate():
-		# Login and validate the user.
-		# user should be an instance of your `User` class
-		login_user(user)
-
-		next = request.args.get('next')
-		# next_is_valid should check if the user has valid
-		# permission to access the `next` url
-		if not next_is_valid(next):
-			return abort(400)
-
-		return redirect(next or flask.url_for('index'))
-	return render_template('login.html', form=form)
 
 
 
