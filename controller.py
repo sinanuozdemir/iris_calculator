@@ -56,6 +56,7 @@ website_re = re.compile("(https?://)(www.)?([^\.]+).\w+/?((\w+/?)*(\?[\w=]+)?)",
 @application.route('/insert', methods=['GET', 'POST'])
 def insert():
 	error = 'tracked visit. Nothing more to see here'
+	status = 'success'
 	try:
 		d = {}
 		print request.__dict__
@@ -83,6 +84,7 @@ def insert():
 				error = 'successfully tracked email'
 			else:
 				error = 'no such email found'
+				return jsonify(**{'status':'failure', 'description':error})
 		elif d['full_url']:
 			ur = d['full_url'].replace('https://','').replace('http://','').replace('www.','')
 			if '/' not in ur: ur += '/'
@@ -102,6 +104,7 @@ def insert():
 			d['secure'] = 'https://' in d['full_url']
 		else:
 			error = 'no recognized action taken'
+			return jsonify(**{'status':'failure', 'description':error})
 		print d
 		p = models.Visit(**d)
 		p.date = datetime.now()
@@ -110,7 +113,8 @@ def insert():
 	except Exception as e:
 		print e
 		error = repr(e)
-	return jsonify(**{'status':'success', 'description':error})
+		status = 'failure'
+	return jsonify(**{'status':status, 'description':error})
 
 def get_or_create(model, **kwargs):
     instance = db.session.query(model).filter_by(**kwargs).first()
