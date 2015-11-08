@@ -22,6 +22,9 @@ import json
 from datetime import datetime
 from collections import Counter
 
+website_re = re.compile("(https?://)?(www.)?([^\.]+)(.\w+)/?((\w+/?)*(\?[\w=]+)?)", re.IGNORECASE)
+
+
 utc = timezone('UTC')
 time_zone = timezone('US/Eastern')
 
@@ -42,8 +45,6 @@ def get_my_ip():
 	fwd = request.environ.get('HTTP_X_FORWARDED_FOR', None)
 	if fwd is None:
 		fwd = request.environ.get('REMOTE_ADDR')
-	# sometimes x-forwarded-for contains multiple addresses,
-	# actual client is first, rest are proxy
 	ip = fwd.split(',')[0]
 	if request.args.get('format') == 'json':
 		return jsonify(**{'ip': ip})
@@ -75,7 +76,6 @@ def chart_data(appid):
 	resp = Response(js, status=200, mimetype='application/json')
 	return resp
 
-website_re = re.compile("(https?://)(www.)?([^\.]+).\w+/?((\w+/?)*(\?[\w=]+)?)", re.IGNORECASE)
 
 @application.route('/insert', methods=['GET', 'POST'])
 def insert():
@@ -179,20 +179,17 @@ def login():
 
 @application.route('/check',methods=['GET'])
 def check():
-	getUser(email='sinan@legionanalytics.com').set_password('dino9119')
-	db.session.commit()
-	# login_user(getUser(id = 2), remember=True, force=True, fresh=True)
-	# print current_user
-	return render_template('login.html', apps = apps)
+	pass
 
 
 
 @application.route('/test',methods=['GET', 'POST'])
 @login_required
-def model():
+def test():
 	if request.method == 'POST':
 		if 'site_to_track' in request.form:
-			a = models.App(appid = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(64)), user = current_user, website = get_or_create(models.Website, base=request.form['site_to_track']))
+			base = request.form['site_to_track'].replace('https://','').replace('http://','').replace('www.','').replace('/','')
+			a = models.App(appid = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(64)), user = current_user, website = get_or_create(models.Website, base=base))
 			db.session.add(a)
 			db.session.commit()
 	print current_user
