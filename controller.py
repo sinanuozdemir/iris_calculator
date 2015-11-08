@@ -1,3 +1,5 @@
+import pytz
+from pytz import timezone
 import string, random
 from werkzeug.security import generate_password_hash, check_password_hash
 import re
@@ -20,9 +22,16 @@ import json
 from datetime import datetime
 from collections import Counter
 
+utc = timezone('UTC')
+time_zone = timezone('US/Eastern')
+
 login_manager.login_view = "login"
 login_manager.login_message = "Please log in"
 
+
+@application.route("/", methods=["GET"])
+def home():
+	return render_template('splash.html')
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -56,16 +65,14 @@ def chart_data(appid):
 	dates = []
 	for d in data_set:
 		browsers.append(d[1])
-		dates.append(datetime.strftime(d[0], '%m-%d-%Y'))
+		dates.append(datetime.strftime(utc.localize(d[0]).astimezone(time_zone), '%m-%d-%Y'))
 	data = {
 		'host':app.website.base,
 		'browsers': [{'label':k, 'y':v} for k, v in Counter(browsers).iteritems()],
 		'visits': sorted([{'label':k, 'y':v} for k, v in Counter(dates).iteritems()], key = lambda x:x['label'])
 	}
 	js = json.dumps(data)
-
 	resp = Response(js, status=200, mimetype='application/json')
-
 	return resp
 
 website_re = re.compile("(https?://)(www.)?([^\.]+).\w+/?((\w+/?)*(\?[\w=]+)?)", re.IGNORECASE)
