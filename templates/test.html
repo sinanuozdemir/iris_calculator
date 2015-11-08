@@ -1,0 +1,131 @@
+{% extends "layout.html" %}
+
+{% block body %}
+
+
+
+	{% block page_content %}
+
+  You have {{current_user.apps_allowed}} apps allowed and you have {{apps|length}} apps and you have {{current_user.apps_allowed - apps|length}} apps left<br><br>
+  <br><Br>
+  {% if apps|length == 0 %}
+<form class="form-horizontal" method='POST'>
+<fieldset>
+
+<!-- Form Name -->
+<legend>Form Name</legend>
+
+<!-- Text input-->
+<div class="control-group">
+  <label class="control-label" for="site">Site URL</label>
+  <div class="controls">
+    <input id="site" name="site_to_track" type="text" placeholder="latracking.com" class="input-xlarge" required="">
+    
+  </div>
+</div>
+
+<!-- Button -->
+<div class="control-group">
+  <label class="control-label" for="singlebutton-0"></label>
+  <div class="controls">
+    <button id="singlebutton-0" name="singlebutton-0" class="btn btn-success">Add tracking!</button>
+  </div>
+</div>
+
+</fieldset>
+</form>
+
+  {% endif %}
+
+
+
+<body>
+    <link href="https://s3-us-west-2.amazonaws.com/tier5/css/bootstrap.css" rel="stylesheet" />
+ <div class="section"> 
+      <div class="container"> 
+  <div class="row">
+{% for app in apps %}
+ <!-- {% for email in app.emails %}
+  Email id {{email.emailid}} with {{email.opens|length}} opens<br>
+  {% endfor %} -->
+  <button type="button" name={{app.appid}} onclick="getData('{{app.appid}}')">{{app.website.base}} </button><Br>
+  
+    <div class="col-md-1">
+      <img src="http://logo.clearbit.com/{{app.website.base}}" class="img-responsive" altSrc="http://pingendo.github.io/pingendo-bootstrap/assets/placeholder.png" onerror="this.src = $(this).attr('altSrc')"></a>
+    </div>
+    {% endfor %}
+</div>
+     
+    
+        <div class="row">
+          <div class="col-md-6">
+            <div id="chartContainer" style="height: 100%; width: 100%;"></div>
+          </div>
+          <div class="col-md-6">
+            <div id="chartContainer2" style="height: 100%; width: 100%;">
+            </div>
+        </div>
+      </div>
+   </div>
+ </div>
+
+<script src="static/js/bootstrap.min.js"></script>
+    <script src="static/js/chart/Chart.min.js"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+
+<script type="text/javascript" src="static/js/jquery.easy-pie-chart.js"></script>
+
+<link rel="stylesheet"type="text/css" href="static/css/jquery.easy-pie-chart.css">
+<script type="text/javascript" src="static/js/canvasjs.min.js"></script>
+<script type="text/javascript">
+  function drawPie(host, data) {
+    var chart = new CanvasJS.Chart("chartContainer", {
+
+      title:{
+        text: "Browsers"
+      },
+      data: [
+        {
+         /*** Change type "column" to "bar", "area", "line" or "pie"***/
+         type: "pie",
+         dataPoints: data
+       }
+       ]
+     });
+    chart.render();
+  }
+</script>
+  <script type="text/javascript">
+  function drawBar(host, data) {
+    var chart2 = new CanvasJS.Chart("chartContainer2", {
+
+      title:{
+        text: "Visits"
+      },
+      data: [
+        {
+         /*** Change type "column" to "bar", "area", "line" or "pie"***/
+         type: "line",
+         dataPoints: data
+       }
+       ]
+     });
+    chart2.render();
+  }
+  </script>
+ <script type="text/javascript">
+    function getData(appid) {
+      $.get( "/data/"+appid, function( data ) {
+          drawPie(data['host'], data['browsers']);
+          drawBar(data['host'], data['visits']);
+        });
+  }
+  </script>
+
+</body>
+
+	{% endblock %}
+
+
+
+{% endblock %}

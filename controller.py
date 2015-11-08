@@ -1,13 +1,16 @@
+import string, random
+from werkzeug.security import generate_password_hash, check_password_hash
 import re
 from datetime import datetime
-from flask import Flask, render_template, jsonify, request, Response, redirect, abort
+from flask import Flask, render_template, jsonify, request, Response, redirect, abort, flash
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.cors import CORS
-
-
+from flask.ext.login import LoginManager, login_user, current_user, logout_user, login_required
+login_manager = LoginManager()
 application = Flask(__name__)
 application.config.from_object('config')
 CORS(application)
+login_manager.init_app(application)
 from user_agents import parse
 db = SQLAlchemy(application)
 import models
@@ -17,6 +20,13 @@ import json
 from datetime import datetime
 from collections import Counter
 
+login_manager.login_view = "login"
+login_manager.login_message = "Please log in"
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return getUser(id = user_id)
 
 @application.route("/get_my_ip", methods=["GET"])
 def get_my_ip():
@@ -32,16 +42,23 @@ def get_my_ip():
 		return ip
 
 
-@application.route("/data/<path:host>")
-def chart_data(host):
-	data_set = db.session.query(models.Visit).filter(models.Visit.full_url.ilike('%'+host+'%')).values('date', 'browser')
+@application.route("/logout")
+@login_required
+def logout():
+	logout_user()
+	return redirect('/login')
+
+@application.route("/data/<path:appid>")
+def chart_data(appid):
+	app = db.session.query(models.App).filter_by(appid = appid).first()
+	data_set = db.session.query(models.Visit).filter_by(website_id=app.website.id).values('date', 'browser')
 	browsers = []
 	dates = []
 	for d in data_set:
 		browsers.append(d[1])
 		dates.append(datetime.strftime(d[0], '%m-%d-%Y'))
 	data = {
-		'host':host,
+		'host':app.website.base,
 		'browsers': [{'label':k, 'y':v} for k, v in Counter(browsers).iteritems()],
 		'visits': sorted([{'label':k, 'y':v} for k, v in Counter(dates).iteritems()], key = lambda x:x['label'])
 	}
@@ -62,7 +79,6 @@ def insert():
 		print request.__dict__
 		d['private_ip'] = request.environ.get('REMOTE_ADDR')
 		d['public_ip'] = request.environ.get('HTTP_X_FORWARDED_FOR', None)
-		print "IPPPPP", d
 		if d['public_ip']:
 			g = geocoder.ip(d['public_ip'])
 			d['lat'], d['lng'] = g.latlng
@@ -75,12 +91,10 @@ def insert():
 			d['browser'] = user_agent.browser.family
 			d['is_bot'], d['is_mobile'], d['is_tablet'], d['is_pc'] = user_agent.is_bot, user_agent.is_mobile, user_agent.is_tablet, user_agent.is_pc
 		d['full_url'] = request.environ.get('HTTP_REFERER')
-		# d['website_id'] = 1
 		if request.args.get('emailid'):
 			d['email_id'] = db.session.query(models.Email).filter_by(emailid=request.args.get('emailid')).first()
 			if d['email_id']:
 				d['email_id'] = d['email_id'].id
-				# d['website_id'] = 1
 				error = 'successfully tracked email'
 			else:
 				error = 'no such email found'
@@ -126,31 +140,57 @@ def get_or_create(model, **kwargs):
         db.session.commit()
         return instance
 
-def getUser(email):
-	return db.session.query(models.User).filter(models.User.email.like(email)).first()
+def getUser(**kwargs):
+	return db.session.query(models.User).filter_by(**kwargs).first()
 
 def getWebsite(base_):
 	return db.session.query(models.Website).filter(models.Website.base.like(base_)).first()
 
 
+
+@application.route('/login',methods=['GET', 'POST'])
+def login():
+	if request.method == 'POST':
+		email = request.form['email']
+		password = request.form['password']
+		password2 = request.form.get('password2')
+		if password2 and password2 == password:
+			u = models.User(email=email, pw_hash = generate_password_hash(password), is_active = True, is_authenticated = True)
+			db.session.add(u)
+			db.session.commit()
+			login_user(u, remember=True, force=True, fresh=False)
+			flash('Logged in successfully.')
+			return redirect('/test')
+		else:
+			u = getUser(email=email)
+			if u and u.check_password(password):
+				login_user(u, remember=True, force=True, fresh=False)
+				flash('Logged in successfully.')
+				return redirect('/test')
+	return render_template('login.html')
+
+
 @application.route('/check',methods=['GET'])
 def check():
-	# u = models.User(email='sinan@legionanalytics.com')
-	# db.session.add(u)
-	# db.session.commit()
-	# a = models.App(user = getUser('sinan@legionanalytics.com'), website = getWebsite('legionanalytics.com'))
-	# db.session.add(a)
-	# db.session.commit()
-	# print load_user(2)
-	# print db.session.query(models.Website).filter_by(**{'base':'legionanalytics.com'}).first()
-	print request.args.get('emailid')
-	# for w in db.session.query(models.Website).all():
-	# 	print w.visits, w
+	getUser(email='sinan@legionanalytics.com').set_password('dino9119')
+	db.session.commit()
+	# login_user(getUser(id = 2), remember=True, force=True, fresh=True)
+	# print current_user
+	return render_template('login.html', apps = apps)
+
 
 
 @application.route('/test',methods=['GET', 'POST'])
+@login_required
 def model():
-	return render_template('model.html')
+	if request.method == 'POST':
+		if 'site_to_track' in request.form:
+			a = models.App(appid = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(64)), user = current_user, website = get_or_create(models.Website, base=request.form['site_to_track']))
+			db.session.add(a)
+			db.session.commit()
+	print current_user
+	apps = db.session.query(models.App).filter_by(user_id = current_user.id).all()
+	return render_template('test.html', apps = apps)
 
 #Handle Bad Requests
 @application.errorhandler(404)
@@ -158,9 +198,11 @@ def page_not_found(e):
 	return render_template('404.html'), 404
 
 
-
+application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jmN] sdfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
 
 if __name__ == '__main__':
     application.run(debug=True)
+
+
 
 

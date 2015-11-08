@@ -5,16 +5,29 @@
 
 
 	{% block page_content %}
+
+
+    Hi {{ current_user.email }}!<br><br>
+  You have {{current_user.apps_allowed}} apps allowed and you have {{apps|length}} apps and you have {{current_user.apps_allowed - apps|length}} apps left<br><br>
+  <br><Br>
+  {% if current_user.apps_allowed - apps|length > 0 %}
+
+  
+  APPS<br>
+  {% for app in apps %}
+  {% for email in app.emails %}
+  Email id {{email.emailid}} with {{email.opens|length}} opens<br>
+
+  {%endfor %}
+<br><br><br>
+  <button type="button" name={{app.appid}} onclick="getData('{{app.appid}}')">Run report for {{app.website.base}}</button>
+  {% endfor %}
 	<script src="static/js/bootstrap.min.js"></script>
     <script src="static/js/chart/Chart.min.js"></script>
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
 <script type="text/javascript" src="static/js/jquery.easy-pie-chart.js"></script>
 
 <link rel="stylesheet"type="text/css" href="static/css/jquery.easy-pie-chart.css">
-host:<br>
-<input type="text" id="host">
-<input type="date" id="start_date" name="start_date">
-<button type="button" id="b" onclick="getData()">Click Me!</button>
 <script type="text/javascript" src="static/js/canvasjs.min.js"></script>
 <script type="text/javascript">
   function drawPie(host, data) {
@@ -70,16 +83,8 @@ $.ajax({
 </script>
 
 <script type="text/javascript">
-
-$(document).ready(function(){
-    $('#host').keypress(function(e){
-      if(e.keyCode==13)
-      $('#b').click();
-    });
-});
-    function getData() {
-    	var host = document.getElementById("host").value;
-      $.get( "/data/"+host, function( data ) {
+    function getData(appid) {
+      $.get( "/data/"+appid, function( data ) {
           drawPie(data['host'], data['browsers']);
           drawBar(data['host'], data['visits']);
         });

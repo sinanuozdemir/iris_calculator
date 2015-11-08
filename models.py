@@ -1,5 +1,6 @@
 from sqlalchemy.orm import relationship, sessionmaker, backref
 from controller import db
+from werkzeug.security import generate_password_hash, check_password_hash
 
 
 
@@ -13,7 +14,7 @@ class App(db.Model):
 	user = relationship("User", uselist=False, backref="app")
 	emails = relationship('Email', backref='app')
 	def __repr__(self):
-		return '<User %r>' % (self.nickname)
+		return '<App %r>' % (self.appid)
 
 
 
@@ -23,6 +24,7 @@ class User(db.Model):
 	apps_allowed = db.Column(db.Integer, default = 0)
 	nickname = db.Column(db.String(64), index=True, unique=True)
 	first_name = db.Column(db.String(64), index=True, unique=True)
+	pw_hash = db.Column(db.String(512), index=True, unique=True)
 	email = db.Column(db.String(120), index=True, unique=True)
 	is_authenticated = db.Column(db.Boolean, index=False, unique=False)
 	is_active = db.Column(db.Boolean, index=False, unique=False)
@@ -31,6 +33,10 @@ class User(db.Model):
 		return '<User %r>' % (self.nickname)
 	def get_id(self):
 		return str(self.id)
+	def set_password(self, password):
+		self.pw_hash = generate_password_hash(password)
+	def check_password(self, password):
+		return check_password_hash(self.pw_hash, password)
 
 class Website(db.Model):
 	__tablename__ = "website"

@@ -8,15 +8,23 @@
     <!-- CHANGE THE TITLE HERE -->
     <title>LA -- Tracking</title>
     <!-- CHANGE THE TITLE HERE -->
+<div class="navbar navbar-default navbar-static-top"><div class="container"><div class="navbar-header"><button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-ex-collapse"><span class="sr-only">Toggle navigation</span><span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span></button><a class="navbar-brand" href="#"><span>LA-Tracking</span></a></div><div class="collapse navbar-collapse" id="navbar-ex-collapse"><ul class="nav navbar-nav navbar-right">
+<li><a >{{ current_user.email }}</a></li>
+<li class="active"><a href="#">Home</a></li>
+<li><a href="{{ url_for('logout') }}">Log Out</a></li>
 
+</ul></div></div></div><div class="section"><div class="container"><div class="row"><div class="col-md-3"><a href="#">
 
 
     <link href="../static/style.css" rel="stylesheet">
 	<script type="text/javascript" src="https://code.jquery.com/jquery-latest.min.js"></script>
     <script type='text/javascript' src="../static/app.js"></script>
+    <link rel="icon" type="image/ico" href="https://s3-us-west-2.amazonaws.com/tier5/img/favicon.ico"/>
+
 </head>
 
 <body>
+
 
     <header>
     	<div class="outerContainer">

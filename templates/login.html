@@ -5,47 +5,89 @@
 
 
 	{% block page_content %}
-	<script src="static/js/bootstrap.min.js"></script>
-    <script src="static/js/chart/Chart.min.js"></script>
-    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
-<script type="text/javascript" src="static/js/jquery.easy-pie-chart.js"></script>
 
-<link rel="stylesheet"type="text/css" href="static/css/jquery.easy-pie-chart.css">
-host:<br>
 
-</head>
 <body>
+    <link href="https://s3-us-west-2.amazonaws.com/tier5/css/bootstrap.css" rel="stylesheet" />
+
+<form class="form-horizontal" method="POST">
+<fieldset>
+<!-- Form Name -->
+<legend>Log in</legend>
+
+<!-- Text input-->
+<div class="control-group">
+  <label class="control-label" for="textinput-0">Email Address</label>
+  <div class="controls">
+    <input id="textinput-0" name="email" type="text" placeholder="the thing I won't give away to spammers" class="input-xlarge" required="">
+    
+  </div>
+</div>
+
+<!-- Password input-->
+<div class="control-group">
+  <label class="control-label" for="passwordinput-0">Password</label>
+  <div class="controls">
+    <input id="passwordinput-0" name="password" type="password" placeholder="password (make it a good one)" class="input-xlarge" required="">
+    
+  </div>
+</div>
+
+<!-- Button -->
+<div class="control-group">
+  <label class="control-label" for="singlebutton-0"></label>
+  <div class="controls">
+    <button id="singlebutton-0" name="singlebutton-0" class="btn btn-success">Let's do this!</button>
+  </div>
+</div>
+
+</fieldset>
+</form>
 
 
-  <div id="chartContainer" style="height: 300px; width: 100%;"></div>
+  
+<form class="form-horizontal" method="POST">
+<fieldset>
+<!-- Form Name -->
+<legend>Sign up</legend>
+<!-- Text input-->
+<div class="control-group">
+  <label class="control-label" for="textinput-0">Email Address</label>
+  <div class="controls">
+    <input id="textinput-0" name="email" type="text" placeholder="the thing I won't give away to spammers" class="input-xlarge" required="">
+    
+  </div>
+</div>
 
-  <div id="chartContainer2" style="height: 300px; width: 100%;"></div>
+<!-- Password input-->
+<div class="control-group">
+  <label class="control-label" for="passwordinput-0">Password</label>
+  <div class="controls">
+    <input id="passwordinput-0" name="password" type="password" placeholder="password (make it a good one)" class="input-xlarge" required="">
+  </div>
+</div>
+
+<!-- Password input-->
+<div class="control-group">
+  <label class="control-label" for="passwordinput-0">Password Again</label>
+  <div class="controls">
+    <input id="passwordinput-0" name="password2" type="password" placeholder="password again" class="input-xlarge" required="">
+  </div>
+</div>
 
 
-<script type="application/javascript">
-$.ajax({
-  type: "POST",
-  url: "https://www.latracking.com/insert",
-  data: {},
-});
-</script>
+<!-- Button -->
+<div class="control-group">
+  <label class="control-label" for="singlebutton-0"></label>
+  <div class="controls">
+    <button id="singlebutton-0" name="singlebutton-0" class="btn btn-success">Let's do this!</button>
+  </div>
+</div>
 
-<script type="text/javascript">
+</fieldset>
+</form>
 
-$(document).ready(function(){
-    $('#host').keypress(function(e){
-      if(e.keyCode==13)
-      $('#b').click();
-    });
-});
-    function getData() {
-    	var host = document.getElementById("host").value;
-      $.get( "/data/"+host, function( data ) {
-          drawPie(data['host'], data['browsers']);
-          drawBar(data['host'], data['visits']);
-        });
-  }
-  </script>
+</body>
 
 	{% endblock %}
 
