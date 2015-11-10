@@ -173,13 +173,11 @@ def login():
 			db.session.add(u)
 			db.session.commit()
 			login_user(u, remember=True, force=True, fresh=False)
-			flash('Logged in successfully.')
 			return redirect('/test')
 		else:
-			u = getUser(email=email)
+			u = getUser(email=email.lower().strip())
 			if u and u.check_password(password):
 				login_user(u, remember=True, force=True, fresh=False)
-				flash('Logged in successfully.')
 				return redirect('/test')
 	return render_template('login.html')
 
