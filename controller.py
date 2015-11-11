@@ -1,3 +1,5 @@
+import itertools
+import operator
 import pytz
 from pytz import timezone
 import string, random
@@ -60,16 +62,16 @@ def logout():
 @application.route("/data/<path:appid>")
 def chart_data(appid):
 	app = db.session.query(models.App).filter_by(appid = appid).first()
-	data_set = db.session.query(models.Visit).filter_by(website_id=app.website.id).values('date', 'browser')
-	browsers = []
-	dates = []
-	for d in data_set:
-		browsers.append(d[1])
-		dates.append(datetime.strftime(utc.localize(d[0]).astimezone(time_zone), '%m-%d-%Y'))
+	data_set = db.session.query(models.Visit).filter_by(website_id=app.website.id).values('date', 'browser', 'public_ip')
+	data_set = [d for d in data_set]
+	browsers = [d[1] for d in data_set]
+	dates =  [datetime.strftime(utc.localize(d[0]).astimezone(time_zone), '%m-%d-%Y') for d in data_set]
+	ips = [d[2] for d in data_set]
 	data = {
-		'host':app.website.base,
-		'browsers': [{'label':k, 'y':v} for k, v in Counter(browsers).iteritems()],
-		'visits': sorted([{'label':k, 'y':v} for k, v in Counter(dates).iteritems()], key = lambda x:x['label'])
+		'host':       app.website.base,
+		'browsers':   [{'label':k, 'y':v} for k, v in Counter(browsers).iteritems()],
+		'visits':     sorted([{'label':k, 'y':v} for k, v in Counter(dates).iteritems()], key = lambda x:x['label']),
+		'unique_ips': len(set(ips))
 	}
 	js = json.dumps(data)
 	resp = Response(js, status=200, mimetype='application/json')
