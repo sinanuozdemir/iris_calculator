@@ -8,7 +8,7 @@
 
   You have {{current_user.apps_allowed}} apps allowed and you have {{apps|length}} apps and you have {{current_user.apps_allowed - apps|length}} apps left<br><br>
   <br><Br>
-  {% if apps|length == 0 %}
+  {% if current_user.apps_allowed - apps|length > 0 %}
 <form class="form-horizontal" method='POST'>
 <fieldset>
 
@@ -48,11 +48,13 @@
  <!-- {% for email in app.emails %}
   Email id {{email.emailid}} with {{email.opens|length}} opens<br>
   {% endfor %} -->
-  <button type="button" name={{app.appid}} onclick="getData('{{app.appid}}')">{{app.website.base}} </button><Br>
-  
-    <div class="col-md-1">
-      <img src="http://logo.clearbit.com/{{app.website.base}}" class="img-responsive" altSrc="http://pingendo.github.io/pingendo-bootstrap/assets/placeholder.png" onerror="this.src = $(this).attr('altSrc')"></a>
-    </div>
+  <div class="col-md-1">
+    <form action="" method="post">
+      <button class="delete" name="delete" value="{{app.appid}}">Delete</button>
+      <img src="http://logo.clearbit.com/{{app.website.base}}" class="img-responsive" altSrc="http://pingendo.github.io/pingendo-bootstrap/assets/placeholder.png" onerror="this.src = $(this).attr('altSrc')">
+    </form>
+  <button type="button" name={{app.appid}} onclick="getData('{{app.appid}}')">{{app.website.base}} </button>
+    </div><br>
     {% endfor %}
 </div>
      
@@ -70,6 +72,7 @@
  </div>
 
 <script src="static/js/bootstrap.min.js"></script>
+<link href="static/css/main.css" rel="stylesheet">
     <script src="static/js/chart/Chart.min.js"></script>
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
 

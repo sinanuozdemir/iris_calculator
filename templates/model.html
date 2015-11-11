@@ -12,13 +12,13 @@
   <br><Br>
   {% if current_user.apps_allowed - apps|length > 0 %}
 
-  
+
   APPS<br>
   {% for app in apps %}
   {% for email in app.emails %}
   Email id {{email.emailid}} with {{email.opens|length}} opens<br>
 
-  {%endfor %}
+  {% endfor %}
 <br><br><br>
   <button type="button" name={{app.appid}} onclick="getData('{{app.appid}}')">Run report for {{app.website.base}}</button>
   {% endfor %}

@@ -2,8 +2,15 @@
 <html lang="en">
 <head>
 
-
-
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <ul class=flashes>
+    {% for category, message in messages %}
+      <li class="{{ category }}">{{ message }}</li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
 
     <!-- CHANGE THE TITLE HERE -->
     <title>LA -- Tracking</title>
@@ -17,6 +24,7 @@
 
 
     <link href="../static/style.css" rel="stylesheet">
+    
 	<script type="text/javascript" src="https://code.jquery.com/jquery-latest.min.js"></script>
     <script type='text/javascript' src="../static/app.js"></script>
     <link rel="shortcut icon" href="https://s3-us-west-2.amazonaws.com/tier5/img/favicon.ico">

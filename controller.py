@@ -29,7 +29,6 @@ utc = timezone('UTC')
 time_zone = timezone('US/Eastern')
 
 login_manager.login_view = "login"
-login_manager.login_message = "Please log in"
 
 
 @application.route("/", methods=["GET"])
@@ -144,12 +143,12 @@ def insert():
 def get_or_create(model, **kwargs):
 	instance = db.session.query(model).filter_by(**kwargs).first()
 	if instance:
-		return instance
+		return instance, False
 	else:
 		instance = model(**kwargs)
 		db.session.add(instance)
 		db.session.commit()
-		return instance
+		return instance, True
 
 def getModel(model, **kwargs):
 	return db.session.query(model).filter_by(**kwargs).first()
@@ -169,10 +168,16 @@ def login():
 		password = request.form['password']
 		password2 = request.form.get('password2')
 		if password2 and password2 == password:
-			u = models.User(email=email, pw_hash = generate_password_hash(password), is_active = True, is_authenticated = True)
-			db.session.add(u)
-			db.session.commit()
-			login_user(u, remember=True, force=True, fresh=False)
+			u, u_c = get_or_create(models.User, email=email)
+			if not u_c:
+				flash('Someone already owns this!')
+			else:
+				u.pw_hash = generate_password_hash(password)
+				u.is_active = True
+				u.is_authenticated = True
+				db.session.add(u)
+				db.session.commit()
+				login_user(u, remember=True, force=True, fresh=False)
 			return redirect('/test')
 		else:
 			u = getUser(email=email.lower().strip())
@@ -192,12 +197,21 @@ def check():
 @login_required
 def test():
 	if request.method == 'POST':
-		if 'site_to_track' in request.form:
-			base = request.form['site_to_track'].replace('https://','').replace('http://','').replace('www.','').replace('/','').lower().strip()
-			a = models.App(appid = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(20)), user = current_user, website = get_or_create(models.Website, base=base))
-			db.session.add(a)
+		print request.form
+		if 'delete' in request.form:
+			a = get_or_create(models.App, appid=request.form['delete'])[0]
+			db.session.delete(a)
 			db.session.commit()
-	print current_user
+		elif 'site_to_track' in request.form:
+			base = request.form['site_to_track'].replace('https://','').replace('http://','').replace('www.','').replace('/','').lower().strip()
+			w, w_c = get_or_create(models.Website, base=base)
+			a = getModel(models.App, website = w)
+			if a: flash('Someone already owns this website!', 'error')
+			else:	
+				a = models.App(appid = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(20)), user = current_user, website = w)
+				db.session.add(a)
+				db.session.commit()
+		redirect('/test')
 	apps = db.session.query(models.App).filter_by(user_id = current_user.id).all()
 	return render_template('test.html', apps = apps)
 
