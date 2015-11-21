@@ -60,16 +60,34 @@
      
     
         <div class="row">
-          <div class="col-md-6">
+          <div class="col-md-4">
             <div id="chartContainer" style="height: 100%; width: 100%;"></div>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-4">
             <div id="chartContainer2" style="height: 100%; width: 100%;">
             </div>
         </div>
+        <div class="col-md-4">
+            <div id="chartContainer3" style="height: 100%; width: 100%;">
+            </div>
+        </div>
       </div>
-   </div>
- </div>
+
+        <div class="row">
+          <div class="col-md-4">
+            <div id="chartContainer4" style="height: 100%; width: 100%;"></div>
+          </div>
+          <div class="col-md-4">
+            <div id="chartContainer5" style="height: 100%; width: 100%;">
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div id="chartContainer6" style="height: 100%; width: 100%;">
+            </div>
+        </div>
+      </div>
+      </div>
+      </div>
 
 <script src="static/js/bootstrap.min.js"></script>
 <link href="static/css/main.css" rel="stylesheet">
@@ -80,6 +98,24 @@
 
 <link rel="stylesheet"type="text/css" href="static/css/jquery.easy-pie-chart.css">
 <script type="text/javascript" src="static/js/canvasjs.min.js"></script>
+<script type="text/javascript">
+  function drawAfters(host, data) {
+    var chart = new CanvasJS.Chart("chartContainer3", {
+
+      title:{
+        text: "Afters"
+      },
+      data: [
+        {
+         /*** Change type "column" to "bar", "area", "line" or "pie"***/
+         type: "column",
+         dataPoints: data
+       }
+       ]
+     });
+    chart.render();
+  }
+</script>
 <script type="text/javascript">
   function drawPie(host, data) {
     var chart = new CanvasJS.Chart("chartContainer", {
@@ -98,6 +134,33 @@
     chart.render();
   }
 </script>
+  <script type="text/javascript">
+  function drawLastPages(host, data) {
+    var chart2 = new CanvasJS.Chart("chartContainer4", {
+
+      title:{
+        text: "Dropoffs"
+      },
+      data: [
+        {
+         /*** Change type "column" to "bar", "area", "line" or "pie"***/
+         type: "column",
+         dataPoints: data
+       }
+       ]
+     });
+    chart2.render();
+  }
+  </script>
+ <script type="text/javascript">
+    function getData(appid) {
+      $.get( "/data/"+appid, function( data ) {
+          drawPie(data['host'], data['browsers']);
+          drawAfters(data['host'], data['afters']);
+          drawBar(data['host'], data['visits']);
+        });
+  }
+  </script>
   <script type="text/javascript">
   function drawBar(host, data) {
     var chart2 = new CanvasJS.Chart("chartContainer2", {
@@ -120,7 +183,9 @@
     function getData(appid) {
       $.get( "/data/"+appid, function( data ) {
           drawPie(data['host'], data['browsers']);
+          drawAfters(data['host'], data['afters']);
           drawBar(data['host'], data['visits']);
+          drawLastPages(data['host'], data['last_pages']);
         });
   }
   </script>

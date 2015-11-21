@@ -74,6 +74,21 @@ class Visit(db.Model):
 	email_id = db.Column(db.Integer, db.ForeignKey("email.id"), nullable=True)
 	after = db.Column(db.String(1024), index=False, unique=False)
 	gets = db.Column(db.String(1024), index=False, unique=False)
+	events = relationship('Event', backref='event')
 	date = db.Column(db.DateTime())
 	def __repr__(self):
 		return '<Visit %r>' % (self.public_ip)
+
+
+class Event(db.Model):
+	__tablename__ = "event"
+	id = db.Column(db.Integer, primary_key=True)
+	visit_id = db.Column(db.Integer, db.ForeignKey("visit.id"), nullable=True)
+	element_id = db.Column(db.String(1024), index=False, unique=False)
+	element_type = db.Column(db.String(1024), index=False, unique=False)
+	element_tag = db.Column(db.String(1024), index=False, unique=False)
+	event_type = db.Column(db.String(1024), index=False, unique=False)
+	date = db.Column(db.DateTime())
+	def __repr__(self):
+		return '<Visit %r>' % (self.public_ip)
+

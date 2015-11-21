@@ -8,7 +8,43 @@
 
 
 <body>
+
+    <script type="application/javascript">
+  $(document).ready(function(){
+      $.ajax({
+        type: "POST", 
+        url: "http://127.0.0.1:5000/insert",
+        data: {"appid":"UNFMFEWMLTVA3PXX9VEO0ZJLA"},
+      })
+  });
+    
+</script>
     <link href="https://s3-us-west-2.amazonaws.com/tier5/css/bootstrap.css" rel="stylesheet" />
+<script type="text/javascript">
+window.onload = function(){
+    var elms = document.getElementsByTagName('*');
+    for (var i = 0; i < elms.length; i++){
+        if (elms[i].id != "") {
+          elms[i].onmouseover = function(){
+            $.ajax({
+          type: "POST", 
+          url: "http://127.0.0.1:5000/insert",
+          data: {"appid":"UNFMFEWMLTVA3PXX9VEO0ZJLA", "event":true, "event_type":"hover", "element_id":this.id, "element_type":this.type, "element_tag":this.tagName},
+        });
+          }
+
+          elms[i].onclick = function(){
+        $.ajax({
+          type: "POST", 
+          url: "http://127.0.0.1:5000/insert",
+          data: {"appid":"UNFMFEWMLTVA3PXX9VEO0ZJLA", "event":true, "event_type":"click", "element_id":this.id, "element_type":this.type, "element_tag":this.tagName},
+        });
+          }
+        }
+
+    }
+}</script>
+
 
 <form class="form-horizontal" method="POST">
 <fieldset>
@@ -32,43 +68,7 @@
     
   </div>
 </div>
-
-<!-- Button -->
-<!-- <div class="control-group">
-  <label class="control-label" for="singlebutton-0"></label>
-  <div class="controls">
-    <button id="singlebutton-0" name="singlebutton-0" class="btn btn-success">Let's do this!</button>
-  </div>
-</div>
- -->
-<!-- </fieldset>
- -->
-
-<!-- </form> -->
-
-
-  
-<!-- <form class="form-horizontal" method="POST"> -->
-<!-- <fieldset>
- --><!-- Form Name -->
 <legend>Signing up?</legend>
-<!-- Text input-->
-<!-- <div class="control-group">
-  <label class="control-label" for="textinput-0">Email Address</label>
-  <div class="controls">
-    <input id="textinput-0" name="email" type="text" placeholder="the thing I won't give away to spammers" class="input-xlarge" required="">
-    
-  </div>
-</div>
-
- Password input
-<div class="control-group">
-  <label class="control-label" for="passwordinput-0">Password</label>
-  <div class="controls">
-    <input id="passwordinput-0" name="password" type="password" placeholder="password (make it a good one)" class="input-xlarge" required="">
-  </div>
-</div> -->
-
 <!-- Password input-->
 <div class="control-group">
   <label class="control-label" for="passwordinput-0">Password Again</label>
