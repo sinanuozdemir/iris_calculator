@@ -103,6 +103,7 @@ def insert():
 	status = 'success'
 	try:
 		d = {}
+		print request.__dict__
 		if request.args.get('emailid'):
 			d['email_id'] = db.session.query(models.Email).filter_by(emailid=request.args.get('emailid')).first()
 			if d['email_id']:
@@ -112,7 +113,7 @@ def insert():
 				error = 'no such email found'
 				return jsonify(**{'status':'failure', 'description':error})
 		elif 'appid' in request.form and 'HTTP_REFERER' in request.environ:
-			print "APPID PRESENT", request.__dict__
+			print "APPID PRESENT"
 			d['private_ip'] = request.environ.get('REMOTE_ADDR')
 			d['public_ip'] = request.environ.get('HTTP_X_FORWARDED_FOR')
 			d['full_url'] = request.environ.get('HTTP_REFERER', '').strip().lower()
