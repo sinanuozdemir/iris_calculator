@@ -8,39 +8,40 @@
 
 
 <body>
-
-    <script type="application/javascript">
-  $(document).ready(function(){
-      $.ajax({
-        type: "POST", 
-        // url: "http://127.0.0.1:5000/insert",
-        url: "http://latracking.com/insert",
-        data: {"appid":"UNFMFEWMLTVA3PXX9VEO0ZJLA"},
-      })
-  });
-    
-</script>
     <link href="https://s3-us-west-2.amazonaws.com/tier5/css/bootstrap.css" rel="stylesheet" />
 <script type="text/javascript">
 window.onload = function(){
+  if (true) {
+    // live
+    posting_url = "http://latracking.com/insert"
+    appid="UNFMFEWMLTVA3PXX9VEO0ZJLA"; }
+  else {
+    // local
+    posting_url = "http://127.0.0.1:5000/insert"
+  appid = 'ED1I2D38LEZKT0NEEG8G'; }
+  
+  $.ajax({
+        type: "POST", 
+        url: posting_url,
+        data: {"appid":appid},
+      })
     var elms = document.getElementsByTagName('*');
     for (var i = 0; i < elms.length; i++){
         if (elms[i].id != "") {
           elms[i].onmouseover = function(){
             $.ajax({
           type: "POST", 
-          // url: "http://127.0.0.1:5000/insert",
-          url: "http://latracking.com/insert",
-          data: {"appid":"UNFMFEWMLTVA3PXX9VEO0ZJLA", "event":true, "event_type":"hover", "element_id":this.id, "element_type":this.type, "element_tag":this.tagName},
+          url: posting_url,
+          
+          data: {"appid":appid, "event":true, "event_type":"hover", "element_id":this.id, "element_type":this.type, "element_tag":this.tagName},
         });
           }
 
           elms[i].onclick = function(){
         $.ajax({
           type: "POST", 
-          // url: "http://127.0.0.1:5000/insert",
-          url: "http://latracking.com/insert",
-          data: {"appid":"UNFMFEWMLTVA3PXX9VEO0ZJLA", "event":true, "event_type":"click", "element_id":this.id, "element_type":this.type, "element_tag":this.tagName},
+          url: posting_url,
+          data: {"appid":appid, "event":true, "event_type":"click", "element_id":this.id, "element_type":this.type, "element_tag":this.tagName},
         });
           }
         }
