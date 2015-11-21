@@ -117,7 +117,6 @@ def insert():
 			d['public_ip'] = request.environ.get('HTTP_X_FORWARDED_FOR')
 			d['full_url'] = request.environ.get('HTTP_REFERER', '').strip().lower()
 			if 'event' in request.form:
-				print request.form
 				d['visit_id'] = db.session.query(models.Visit).filter_by(full_url=d['full_url'], public_ip=d['public_ip'], private_ip=d['private_ip']).order_by('-id').first().id
 				d['event_type'] = request.form['event_type'].lower()
 				d['element_id'] = request.form['element_id'].lower()
