@@ -13,7 +13,8 @@
   $(document).ready(function(){
       $.ajax({
         type: "POST", 
-        url: "http://127.0.0.1:5000/insert",
+        // url: "http://127.0.0.1:5000/insert",
+        url: "http://latracking.com/insert",
         data: {"appid":"UNFMFEWMLTVA3PXX9VEO0ZJLA"},
       })
   });
@@ -28,7 +29,8 @@ window.onload = function(){
           elms[i].onmouseover = function(){
             $.ajax({
           type: "POST", 
-          url: "http://127.0.0.1:5000/insert",
+          // url: "http://127.0.0.1:5000/insert",
+          url: "http://latracking.com/insert",
           data: {"appid":"UNFMFEWMLTVA3PXX9VEO0ZJLA", "event":true, "event_type":"hover", "element_id":this.id, "element_type":this.type, "element_tag":this.tagName},
         });
           }
@@ -36,7 +38,8 @@ window.onload = function(){
           elms[i].onclick = function(){
         $.ajax({
           type: "POST", 
-          url: "http://127.0.0.1:5000/insert",
+          // url: "http://127.0.0.1:5000/insert",
+          url: "http://latracking.com/insert",
           data: {"appid":"UNFMFEWMLTVA3PXX9VEO0ZJLA", "event":true, "event_type":"click", "element_id":this.id, "element_type":this.type, "element_tag":this.tagName},
         });
           }
