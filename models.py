@@ -90,5 +90,5 @@ class Event(db.Model):
 	event_type = db.Column(db.String(1024), index=False, unique=False)
 	date = db.Column(db.DateTime())
 	def __repr__(self):
-		return '<Visit %r>' % (self.public_ip)
+		return '%s on %s' % (self.event_type, self.element_id)
 
