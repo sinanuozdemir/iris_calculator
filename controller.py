@@ -24,7 +24,7 @@ import json
 from datetime import datetime
 from collections import Counter
 
-website_re = re.compile("(https?://)?(www.)?([^\.]+)(.\w+)/?((\w+/?)*(\?[\w=]+)?)", re.IGNORECASE)
+website_re = re.compile("(https?://)?(www.)?([^\.]+)([\.\w]+)/?((\w+/?)*(\?[\w=]+)?)", re.IGNORECASE)
 
 
 utc = timezone('UTC')
@@ -58,6 +58,7 @@ def get_my_ip():
 def logout():
 	logout_user()
 	return redirect('/login')
+
 
 @application.route("/data/<path:appid>")
 def chart_data(appid):
@@ -96,6 +97,30 @@ def chart_data(appid):
 	resp = Response(js, status=200, mimetype='application/json')
 	return resp
 
+@application.route('/createLink', methods=['GET', 'POST'])
+def createLink():
+	if 'appid' in request.form:
+		r = re.match(website_re, request.form['url'])
+		print r.groups()
+		if '.' not in r.group(4):
+			return jsonify( status='failure', reason='not a valid url')
+		if not r.group(1):
+			u = 'http://'
+		else:
+			u = r.group(1)
+		u+=r.group(3)+r.group(4)
+		if r.group(5): u += '/'+r.group(5)
+		a = getModel(models.App, appid=request.form['appid'])
+		if a:
+			created = False
+			while not created:
+				random_link = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(64))
+				l, created = get_or_create(models.Link, app_id=a.id, linkid=random_link, url=u)
+			return jsonify( status='success', email_id=random_link, url = u)
+		else:
+			return jsonify( status='failure', reason='no such app found')
+
+
 @application.route('/createEmail', methods=['GET', 'POST'])
 def createEmail():
 	if 'appid' in request.form:
@@ -105,7 +130,38 @@ def createEmail():
 			while not created:
 				random_email = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(64))
 				e, created = get_or_create(models.Email, app_id=a.id, emailid=random_email)
-			return jsonify(status='success', email_id=random_email	)
+			return jsonify( status='success', email_id=random_email	)
+
+
+@application.route("/r/<path:l>", methods=['GET'])
+def _redirect(l):
+	d = {}
+	d['private_ip'] = request.environ.get('REMOTE_ADDR')
+	d['public_ip'] = request.environ.get('HTTP_X_FORWARDED_FOR')
+	d['full_url'] = request.environ.get('HTTP_REFERER', '').strip().lower()
+	d['link_id'] = db.session.query(models.Link).filter_by(linkid=l).first()
+	if d['link_id']:
+		red_url = d['link_id'].url
+		d['link_id'] = d['link_id'].id
+		error = 'successfully tracked link'
+	else:
+		return jsonify(**{'status':'failure', 'description':'no such link found'})
+	if d['public_ip']:
+		g = geocoder.ip(d['public_ip'])
+		d['lat'], d['lng'] = g.latlng
+		d['city'] = g.city
+		d['country'] = g.country
+		d['state'] = g.state
+	d['user_agent'] = request.environ.get('HTTP_USER_AGENT')
+	if d['user_agent']:
+		user_agent = parse(d['user_agent'])
+		d['browser'] = user_agent.browser.family
+		d['is_bot'], d['is_mobile'], d['is_tablet'], d['is_pc'] = user_agent.is_bot, user_agent.is_mobile, user_agent.is_tablet, user_agent.is_pc
+	p = models.Visit(**d)
+	p.date = datetime.now()
+	db.session.add(p)
+	db.session.commit()
+	return redirect(red_url, code=302)
 
 @application.route('/insert', methods=['GET', 'POST'])
 def insert():

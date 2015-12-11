@@ -51,6 +51,14 @@ class Email(db.Model):
 	opens = relationship('Visit', backref='email')
 	app_id = db.Column(db.Integer, db.ForeignKey("app.id"), nullable=True)
 
+class Link(db.Model):
+	__tablename__ = "link"
+	id = db.Column(db.Integer, primary_key=True)
+	linkid = db.Column(db.String(64), index=True, unique=True)
+	url = db.Column(db.String(1024), index=True)
+	opens = relationship('Visit', backref='link')
+	app_id = db.Column(db.Integer, db.ForeignKey("app.id"), nullable=True)
+
 
 class Visit(db.Model):
 	__tablename__ = "visit"
@@ -72,6 +80,7 @@ class Visit(db.Model):
 	full_url = db.Column(db.String(1024), index=False, unique=False, nullable = True)
 	website_id = db.Column(db.Integer, db.ForeignKey("website.id"), nullable=True)
 	email_id = db.Column(db.Integer, db.ForeignKey("email.id"), nullable=True)
+	link_id = db.Column(db.Integer, db.ForeignKey("link.id"), nullable=True)
 	after = db.Column(db.String(1024), index=False, unique=False)
 	gets = db.Column(db.String(1024), index=False, unique=False)
 	events = relationship('Event', backref='event')
