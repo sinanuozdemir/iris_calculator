@@ -364,12 +364,10 @@ def convertHTML():
 	soup = bs(html)
 	for a in soup.find_all('a'):
 		if a.get('href'):
-			print a['href'], a.get('href'), appid
 			cleaned = _makeDBLink(a['href'], appid)
 			links.append({'url':a.get('href'), 'text':a.text, 'cleaned':cleaned})
 			a['href'] = cleaned['latracking_url']
-			print a['href']
-	return jsonify(links=links, cleaned_html=str(soup.html))
+	return jsonify(links=links, cleaned_html=str(soup))
 
 
 application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jmN] sdfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
