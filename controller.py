@@ -356,7 +356,7 @@ def getAppIDForEmail(email):
 		app, app_created = get_or_create(models.App, appid=random_appid, user=u, user_id=u.id, website = w)
 	return random_appid
 
-@application.route('/convertHTML',methods=['POST'])
+@application.route('/convertHTML',methods=['POST', 'OPTIONS'])
 @crossdomain(origin='*')
 def convertHTML():
 	appid = getAppIDForEmail(request.form['email'])
