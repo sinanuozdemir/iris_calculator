@@ -13,3 +13,4 @@ Flask-Cors==2.1.0
 user-agents==1.0.1
 Flask-Login==0.3.2
 pytz==2014.4
+beautifulsoup4==4.3.2
