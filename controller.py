@@ -1,5 +1,4 @@
 # coding: utf-8
-
 from urllib import quote_plus
 from datetime import timedelta
 from flask import make_response, request, current_app
