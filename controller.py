@@ -400,11 +400,11 @@ def getAppIDForEmail(email):
 		app, app_created = get_or_create(models.App, appid=random_appid, user=u, user_id=u.id, website = w)
 	return random_appid
 
-@application.route('/convertHTML',methods=['POST', 'GET', 'OPTIONS'])
+@application.route('/convertHTML',methods=['POST', 'OPTIONS'])
 @crossdomain(origin='*')
 def convertHTML():
-	appid = getAppIDForEmail(request.args['email'])
-	html = request.args['html']
+	appid = getAppIDForEmail(request.form['email'])
+	html = request.form['html']
 	links = []
 	soup = bs(html)
 	for a in soup.find_all('a'):
@@ -412,7 +412,7 @@ def convertHTML():
 			cleaned = _makeDBLink(a['href'], appid)
 			links.append({'url':a.get('href'), 'text':a.text, 'cleaned':cleaned})
 			a['href'] = cleaned['latracking_url']
-	return jsonify(links=links, cleaned_html=str(soup))
+	return jsonify(links=links, cleaned_html=(str(soup)))
 
 
 application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jmN] sdfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
