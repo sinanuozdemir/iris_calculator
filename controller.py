@@ -413,7 +413,6 @@ def convertHTML():
 
 
 @application.route('/getNotifications',methods=['GET', 'OPTIONS'])
-@crossdomain(origin='*')
 def getNotifications():
 	notifications = {}
 	appid = getModel(models.App, appid = getAppIDForEmail(request.args['email'])).id
