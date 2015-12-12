@@ -114,7 +114,7 @@ def _makeDBLink(url, appid):
 	if app:
 		created = False
 		while not created:
-			random_link = 'll'+.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(14))
+			random_link = 'll'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(14))
 			l, created = get_or_create(models.Link, app_id=appid, linkid=random_link, url=u)
 		return {'success':True, 'email_id':random_link, 'url':u}
 	return {'success':False}
