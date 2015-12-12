@@ -425,11 +425,13 @@ def getNotifications():
 		d = e.__dict__
 		del d['_labels']
 		d['minutes_ago'] = int((datetime.utcnow() - d['date']).total_seconds()/60)
+		del d['date']
 		n_e.append(d)
 	for l in links:
 		d = l.__dict__
 		del d['_labels']
 		d['minutes_ago'] = int((datetime.utcnow() - d['date']).total_seconds()/60)
+		del d['date']
 		n_l.append(d)
 	print n_l, n_e
 	return jsonify(links=n_l, emails=n_e)
