@@ -435,7 +435,7 @@ def getNotifications():
 	print n_l, n_e
 	return jsonify(links=n_l, emails=n_e)
 
-application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jmN] sdfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
+application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
 
 if __name__ == '__main__':
     application.run(debug=True)
