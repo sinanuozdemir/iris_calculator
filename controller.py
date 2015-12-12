@@ -422,15 +422,16 @@ def getNotifications():
 	n_e, n_l = [], []
 	for e in emails:
 		d = {}
-		# d = {'date':e.date}
+		d['state'] = e.state
+		d['country'] = e.country
 		d['minutes_ago'] = int((datetime.utcnow() - e.date).total_seconds()/60)
 		n_e.append(d)
-	# for l in links:
-	# 	d = l.__dict__
-	# 	del d['_labels']
-	# 	# d['minutes_ago'] = int((datetime.utcnow() - d['date']).total_seconds()/60)
-	# 	del d['date']
-	# 	n_l.append(d)
+	for l in links:
+		d = {}
+		d['state'] = l.state
+		d['country'] = l.country
+		d['minutes_ago'] = int((datetime.utcnow() - l.date).total_seconds()/60)
+		n_l.append(d)
 	print n_l, n_e
 	return jsonify(links=n_l, emails=n_e)
 
