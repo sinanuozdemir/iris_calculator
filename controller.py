@@ -431,6 +431,7 @@ def getNotifications():
 		del d['_labels']
 		d['minutes_ago'] = int((datetime.utcnow() - d['date']).total_seconds()/60)
 		n_l.append(d)
+	print n_l, n_e
 	return jsonify(links=n_l, emails=n_e)
 
 application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jmN] sdfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
