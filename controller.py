@@ -420,12 +420,12 @@ def getNotifications():
 	emails = db.session.query(models.Visit.state, models.Visit.country, models.Visit.date).filter(models.Visit.email_id.in_(emails)).filter_by(notified=False).all()
 	links = db.session.query(models.Visit.state, models.Visit.country, models.Visit.date).filter(models.Visit.link_id.in_(links)).filter_by(notified=False).all()
 	n_e, n_l = [], []
-	# for e in emails:
-	# 	d = e.__dict__
-	# 	del d['_labels']
-	# 	# d['minutes_ago'] = int((datetime.utcnow() - d['date']).total_seconds()/60)
-	# 	del d['date']
-	# 	n_e.append(d)
+	for e in emails:
+		d = e.__dict__
+		del d['_labels']
+		# d['minutes_ago'] = int((datetime.utcnow() - d['date']).total_seconds()/60)
+		del d['date']
+		n_e.append(d)
 	# for l in links:
 	# 	d = l.__dict__
 	# 	del d['_labels']
