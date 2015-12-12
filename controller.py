@@ -417,8 +417,8 @@ def getNotifications():
 	appid = getModel(models.App, appid = getAppIDForEmail(request.args['email'])).id
 	emails = [d.id for d in db.session.query(models.Email).filter_by(app_id = appid).all()]
 	links = [d.id for d in db.session.query(models.Link).filter_by(app_id = appid).all()]
-	# emails = db.session.query(models.Visit.state, models.Visit.country, models.Visit.date).filter(models.Visit.email_id.in_(emails)).filter_by(notified=False).all()
-	# links = db.session.query(models.Visit.state, models.Visit.country, models.Visit.date).filter(models.Visit.link_id.in_(links)).filter_by(notified=False).all()
+	emails = db.session.query(models.Visit.state, models.Visit.country, models.Visit.date).filter(models.Visit.email_id.in_(emails)).filter_by(notified=False).all()
+	links = db.session.query(models.Visit.state, models.Visit.country, models.Visit.date).filter(models.Visit.link_id.in_(links)).filter_by(notified=False).all()
 	n_e, n_l = [], []
 	# for e in emails:
 	# 	d = e.__dict__
