@@ -403,8 +403,8 @@ def getAppIDForEmail(email):
 @application.route('/convertHTML',methods=['POST', 'GET', 'OPTIONS'])
 @crossdomain(origin='*')
 def convertHTML():
-	appid = args(request.args['email'])
-	html = request.form['html']
+	appid = getAppIDForEmail(request.args['email'])
+	html = request.args['html']
 	links = []
 	soup = bs(html)
 	for a in soup.find_all('a'):
