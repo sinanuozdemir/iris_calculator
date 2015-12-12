@@ -115,7 +115,7 @@ def _makeDBLink(url, appid):
 		while not created:
 			random_link = 'll'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(14))
 			l, created = get_or_create(models.Link, app_id=app.id, linkid=random_link, url=u)
-		return {'success':True, 'email_id':random_link, 'url':u, 'latracking_url':'https://latracking.com/r/'+random_link}
+		return {'success':True, 'link_id':random_link, 'url':u, 'latracking_url':'https://latracking.com/r/'+random_link}
 	return {'success':False}
 
 @application.route('/createEmail', methods=['GET', 'POST'])
@@ -357,6 +357,7 @@ def getAppIDForEmail(email):
 	return random_appid
 
 @application.route('/convertHTML',methods=['POST'])
+@crossdomain(origin='*')
 def convertHTML():
 	appid = getAppIDForEmail(request.form['email'])
 	html = request.form['html']
