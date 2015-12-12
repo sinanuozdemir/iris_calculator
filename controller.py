@@ -1,5 +1,6 @@
 # coding: utf-8
 
+from urllib import quote_plus
 from datetime import timedelta
 from flask import make_response, request, current_app
 from functools import update_wrapper
@@ -407,11 +408,11 @@ def convertHTML():
 	links = []
 	soup = bs(html)
 	for a in soup.find_all('a'):
-		if a.get('href'):
+		if a.get('href') and 'latracking.com/r/' not in a['href'].lower():
 			cleaned = _makeDBLink(a['href'], appid)
 			links.append({'url':a.get('href'), 'text':a.text, 'cleaned':cleaned})
 			a['href'] = cleaned['latracking_url']
-	return jsonify(links=links, cleaned_html=str(soup))
+	return jsonify(links=links, cleaned_html=quote_plus(str(soup)))
 
 
 application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jmN] sdfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
