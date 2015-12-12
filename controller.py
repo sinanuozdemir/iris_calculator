@@ -1,3 +1,6 @@
+# coding: utf-8
+
+from bs4 import BeautifulSoup as bs
 import itertools
 import operator
 import pytz
@@ -64,8 +67,6 @@ def chart_data(appid):
 	events = db.session.query(models.Event).filter(models.Event.visit_id.in_([d[4] for d in data_set])).order_by('date').all()
 	for d in data_set:
 		visit_events = [{'event':e, 'pretty_event':str(e)} for e in events if e.visit_id==d[4]]
-		# if visit_events:
-		# 	print visit_events
 		d[0] = datetime.strftime(d[0], '%m-%d-%Y')
 	afters = [d[3] for d in data_set]
 	afters = [a if a else app.website.base for a in afters]
@@ -77,7 +78,6 @@ def chart_data(appid):
 	ips = [d[2] for d in data_set]
 	sessions = {k: list(v) for k, v in itertools.groupby(data_set, key=lambda x:x[2])}
 	session_lens = [len(a) for a in sessions.values()]
-	print sessions
 	last_pages = [a[-1][3] if a[-1][3] else app.website.base for a in sessions.values()]
 	data = {
 		'host':       app.website.base,
@@ -101,7 +101,6 @@ def createLink():
 
 def _makeDBLink(url, appid):
 	r = re.match(website_re, url)
-	print r.groups()
 	if '.' not in r.group(4):
 		return jsonify( status='failure', reason='not a valid url')
 	if not r.group(1):
@@ -115,8 +114,8 @@ def _makeDBLink(url, appid):
 		created = False
 		while not created:
 			random_link = 'll'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(14))
-			l, created = get_or_create(models.Link, app_id=appid, linkid=random_link, url=u)
-		return {'success':True, 'email_id':random_link, 'url':u}
+			l, created = get_or_create(models.Link, app_id=app.id, linkid=random_link, url=u)
+		return {'success':True, 'email_id':random_link, 'url':u, 'latracking_url':'https://latracking.com/r/'+random_link}
 	return {'success':False}
 
 @application.route('/createEmail', methods=['GET', 'POST'])
@@ -126,7 +125,6 @@ def createEmail():
 	return jsonify(**{})
 
 def _makeDBEmail(form_dict):
-	print form_dict
 	app = getModel(models.App, appid=form_dict['appid'])
 	if app:
 		d = {}
@@ -193,7 +191,6 @@ def emailOpen(e):
 		user_agent = parse(d['user_agent'])
 		d['browser'] = user_agent.browser.family
 		d['is_bot'], d['is_mobile'], d['is_tablet'], d['is_pc'] = user_agent.is_bot, user_agent.is_mobile, user_agent.is_tablet, user_agent.is_pc
-	print d
 	p = models.Visit(**d)
 	p.date = datetime.now()
 	db.session.add(p)
@@ -243,7 +240,6 @@ def insert():
 					d['gets'] = None
 			d['secure'] = 'https://' in d['full_url']
 		else: return jsonify(**{'status':'failure', 'description':'no recognized action taken'})
-		print d
 		if d['public_ip']:
 			g = geocoder.ip(d['public_ip'])
 			d['lat'], d['lng'] = g.latlng
@@ -309,7 +305,6 @@ def login():
 			return redirect('/test')
 		else:
 			u = getUser(email=email.lower().strip())
-			print u, u.check_password(password)
 			if u and u.check_password(password):
 				login_user(u, remember=True, force=True, fresh=False)
 				return redirect('/test')
@@ -347,6 +342,34 @@ def test():
 @application.errorhandler(404)
 def page_not_found(e):
 	return render_template('404.html'), 404
+
+
+def getAppIDForEmail(email):
+	u, t = get_or_create(models.User, email=email)
+	random_appid = 'aa'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(14))
+	app_created = False
+	apps = db.session.query(models.App).filter_by(user = u).all()
+	if len(apps):
+		return apps[0].appid
+	w, w_c = get_or_create(models.Website, base=email.split('@')[1].lower().strip())
+	while not app_created:
+		app, app_created = get_or_create(models.App, appid=random_appid, user=u, user_id=u.id, website = w)
+	return random_appid
+
+@application.route('/convertHTML',methods=['POST'])
+def convertHTML():
+	appid = getAppIDForEmail('sinan@legionanalytics.com')
+	html = request.form['html']
+	links = []
+	soup = bs(html)
+	for a in soup.find_all('a'):
+		if a.get('href'):
+			print a['href'], a.get('href'), appid
+			cleaned = _makeDBLink(a['href'], appid)
+			links.append({'url':a.get('href'), 'text':a.text, 'cleaned':cleaned})
+			a['href'] = cleaned['latracking_url']
+			print a['href']
+	return jsonify(links=links, cleaned_html=str(soup.html))
 
 
 application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jmN] sdfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
