@@ -412,7 +412,7 @@ def convertHTML():
 	return jsonify(links=links, cleaned_html=(str(soup)), email=e)
 
 
-@application.route('/getNotifications',methods=['GET', 'OPTIONS'])
+@application.route('/getNotifications',methods=['GET'])
 def getNotifications():
 	notifications = {}
 	appid = getModel(models.App, appid = getAppIDForEmail(request.args['email'])).id
