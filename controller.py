@@ -423,13 +423,13 @@ def getNotifications():
 	for e in emails:
 		d = e.__dict__
 		del d['_labels']
-		d['minutes_ago'] = int((datetime.utcnow() - d['date']).total_seconds()/60)
+		# d['minutes_ago'] = int((datetime.utcnow() - d['date']).total_seconds()/60)
 		del d['date']
 		n_e.append(d)
 	for l in links:
 		d = l.__dict__
 		del d['_labels']
-		d['minutes_ago'] = int((datetime.utcnow() - d['date']).total_seconds()/60)
+		# d['minutes_ago'] = int((datetime.utcnow() - d['date']).total_seconds()/60)
 		del d['date']
 		n_l.append(d)
 	print n_l, n_e
