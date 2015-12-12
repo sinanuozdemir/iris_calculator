@@ -2,8 +2,6 @@ from sqlalchemy.orm import relationship, sessionmaker, backref
 from controller import db
 from werkzeug.security import generate_password_hash, check_password_hash
 
-
-
 class App(db.Model):
 	__tablename__ = "app"
 	id = db.Column(db.Integer, primary_key=True)
@@ -15,8 +13,6 @@ class App(db.Model):
 	emails = relationship('Email', backref='app')
 	def __repr__(self):
 		return '<App %r>' % (self.appid)
-
-
 
 class User(db.Model):
 	__tablename__ = "user"
@@ -48,6 +44,12 @@ class Email(db.Model):
 	__tablename__ = "email"
 	id = db.Column(db.Integer, primary_key=True)
 	emailid = db.Column(db.String(64), index=True, unique=True)
+	text = db.Column(db.Text(), index=True)
+	html = db.Column(db.Text(), index=True)
+	to_address = db.Column(db.Text(), index=True)
+	from_address = db.Column(db.Text(), index=True)
+	cc_address = db.Column(db.Text(), index=True)
+	bcc_address = db.Column(db.Text(), index=True)
 	opens = relationship('Visit', backref='email')
 	app_id = db.Column(db.Integer, db.ForeignKey("app.id"), nullable=True)
 

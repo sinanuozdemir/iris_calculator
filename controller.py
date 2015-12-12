@@ -100,37 +100,50 @@ def chart_data(appid):
 @application.route('/createLink', methods=['GET', 'POST'])
 def createLink():
 	if 'appid' in request.form:
-		r = re.match(website_re, request.form['url'])
-		print r.groups()
-		if '.' not in r.group(4):
-			return jsonify( status='failure', reason='not a valid url')
-		if not r.group(1):
-			u = 'http://'
-		else:
-			u = r.group(1)
-		u+=r.group(3)+r.group(4)
-		if r.group(5): u += '/'+r.group(5)
-		a = getModel(models.App, appid=request.form['appid'])
-		if a:
-			created = False
-			while not created:
-				random_link = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(64))
-				l, created = get_or_create(models.Link, app_id=a.id, linkid=random_link, url=u)
-			return jsonify( status='success', email_id=random_link, url = u)
-		else:
-			return jsonify( status='failure', reason='no such app found')
+		return jsonify(**_makeDBLink(request.form['url'], request.form['appid']))
+	return jsonify(**{})
 
+def _makeDBLink(url, appid):
+	r = re.match(website_re, url)
+	print r.groups()
+	if '.' not in r.group(4):
+		return jsonify( status='failure', reason='not a valid url')
+	if not r.group(1):
+		u = 'http://'
+	else:
+		u = r.group(1)
+	u+=r.group(3)+r.group(4)
+	if r.group(5): u += '/'+r.group(5)
+	a = getModel(models.App, appid=appid)
+	if a:
+		created = False
+		while not created:
+			random_link = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(64))
+			l, created = get_or_create(models.Link, app_id=a.id, linkid=random_link, url=u)
+		return {'success':True, 'email_id':random_link, 'url':u}
+	return {'success':False}
 
 @application.route('/createEmail', methods=['GET', 'POST'])
 def createEmail():
 	if 'appid' in request.form:
-		a = getModel(models.App, appid=request.form['appid'])
-		if a:
-			created = False
-			while not created:
-				random_email = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(64))
-				e, created = get_or_create(models.Email, app_id=a.id, emailid=random_email)
-			return jsonify( status='success', email_id=random_email	)
+		return jsonify(**_makeDBEmail(request.form))
+	return jsonify(**{})
+
+def _makeDBEmail(form_dict):
+	print form_dict
+	a = getModel(models.App, appid=form_dict['appid'])
+	if a:
+		d = {}
+		created = False
+		d['app_id'] = a.id
+		while not created:
+			random_email = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(64))
+			d['emailid'] = random_email
+			for i in ['text', 'html', 'cc_address', 'bcc_address', 'to_address', 'from_address']:
+				if i in form_dict: d[i] = form_dict[i]
+			e, created = get_or_create(models.Email, **d)
+		return {'success':True, 'email_id':random_email}
+	return {'success':False}
 
 
 @application.route("/r/<path:l>", methods=['GET'])
