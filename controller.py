@@ -358,7 +358,7 @@ def getAppIDForEmail(email):
 
 @application.route('/convertHTML',methods=['POST'])
 def convertHTML():
-	appid = getAppIDForEmail('sinan@legionanalytics.com')
+	appid = getAppIDForEmail(request.form['email'])
 	html = request.form['html']
 	links = []
 	soup = bs(html)
