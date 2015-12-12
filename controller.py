@@ -34,12 +34,10 @@ login_manager.login_view = "login"
 
 
 @application.route("/", methods=["GET"])
-def home():
-	return render_template('splash.html')
+def home(): return render_template('splash.html')
 
 @login_manager.user_loader
-def load_user(user_id):
-    return getUser(id = user_id)
+def load_user(user_id): return getUser(id = user_id)
 
 @application.route("/get_my_ip", methods=["GET"])
 def get_my_ip():
@@ -52,13 +50,11 @@ def get_my_ip():
 	else:
 		return ip
 
-
 @application.route("/logout")
 @login_required
 def logout():
 	logout_user()
 	return redirect('/login')
-
 
 @application.route("/data/<path:appid>")
 def chart_data(appid):
@@ -114,12 +110,12 @@ def _makeDBLink(url, appid):
 		u = r.group(1)
 	u+=r.group(3)+r.group(4)
 	if r.group(5): u += '/'+r.group(5)
-	a = getModel(models.App, appid=appid)
-	if a:
+	app = getModel(models.App, appid=appid)
+	if app:
 		created = False
 		while not created:
-			random_link = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(64))
-			l, created = get_or_create(models.Link, app_id=a.id, linkid=random_link, url=u)
+			random_link = 'll'+.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(14))
+			l, created = get_or_create(models.Link, app_id=appid, linkid=random_link, url=u)
 		return {'success':True, 'email_id':random_link, 'url':u}
 	return {'success':False}
 
@@ -131,13 +127,13 @@ def createEmail():
 
 def _makeDBEmail(form_dict):
 	print form_dict
-	a = getModel(models.App, appid=form_dict['appid'])
-	if a:
+	app = getModel(models.App, appid=form_dict['appid'])
+	if app:
 		d = {}
 		created = False
-		d['app_id'] = a.id
+		d['app_id'] = form_dict['appid']
 		while not created:
-			random_email = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(64))
+			random_email = 'ee'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(14))
 			d['emailid'] = random_email
 			for i in ['text', 'html', 'cc_address', 'bcc_address', 'to_address', 'from_address']:
 				if i in form_dict: d[i] = form_dict[i]
@@ -145,17 +141,16 @@ def _makeDBEmail(form_dict):
 		return {'success':True, 'email_id':random_email}
 	return {'success':False}
 
-
 @application.route("/r/<path:l>", methods=['GET'])
 def _redirect(l):
 	d = {}
 	d['private_ip'] = request.environ.get('REMOTE_ADDR')
 	d['public_ip'] = request.environ.get('HTTP_X_FORWARDED_FOR')
 	d['full_url'] = request.environ.get('HTTP_REFERER', '').strip().lower()
-	d['link_id'] = db.session.query(models.Link).filter_by(linkid=l).first()
-	if d['link_id']:
-		red_url = d['link_id'].url
-		d['link_id'] = d['link_id'].id
+	link = db.session.query(models.Link).filter_by(linkid=l).first()
+	if link:
+		red_url = link.url
+		d['link_id'] = link.id
 		error = 'successfully tracked link'
 	else:
 		return jsonify(**{'status':'failure', 'description':'no such link found'})
@@ -176,24 +171,43 @@ def _redirect(l):
 	db.session.commit()
 	return redirect(red_url, code=302)
 
+@application.route("/e/<path:e>", methods=['GET'])
+def emailOpen(e):
+	d = {}
+	d['private_ip'] = request.environ.get('REMOTE_ADDR')
+	d['public_ip'] = request.environ.get('HTTP_X_FORWARDED_FOR')
+	d['full_url'] = request.environ.get('HTTP_REFERER', '').strip().lower()
+	email = db.session.query(models.Email).filter_by(emailid=e).first()
+	if email:
+		d['email_id'] = email.id
+	else:
+		return jsonify(**{'status':'failure', 'description':'no such email found'})
+	if d['public_ip']:
+		g = geocoder.ip(d['public_ip'])
+		d['lat'], d['lng'] = g.latlng
+		d['city'] = g.city
+		d['country'] = g.country
+		d['state'] = g.state
+	d['user_agent'] = request.environ.get('HTTP_USER_AGENT')
+	if d['user_agent']:
+		user_agent = parse(d['user_agent'])
+		d['browser'] = user_agent.browser.family
+		d['is_bot'], d['is_mobile'], d['is_tablet'], d['is_pc'] = user_agent.is_bot, user_agent.is_mobile, user_agent.is_tablet, user_agent.is_pc
+	print d
+	p = models.Visit(**d)
+	p.date = datetime.now()
+	db.session.add(p)
+	db.session.commit()
+	return jsonify(success=True, description='successfully tracked email')
+
+
+
 @application.route('/insert', methods=['GET', 'POST'])
 def insert():
 	error = 'tracked visit. Nothing more to see here'
 	status = 'success'
 	try:
-		d = {}
-		d['private_ip'] = request.environ.get('REMOTE_ADDR')
-		d['public_ip'] = request.environ.get('HTTP_X_FORWARDED_FOR')
-		d['full_url'] = request.environ.get('HTTP_REFERER', '').strip().lower()
-		if request.args.get('emailid'):
-			d['email_id'] = db.session.query(models.Email).filter_by(emailid=request.args.get('emailid')).first()
-			if d['email_id']:
-				d['email_id'] = d['email_id'].id
-				error = 'successfully tracked email'
-			else:
-				error = 'no such email found'
-				return jsonify(**{'status':'failure', 'description':error})
-		elif 'appid' in request.form and 'HTTP_REFERER' in request.environ:
+		if 'appid' in request.form and 'HTTP_REFERER' in request.environ:
 			if 'event' in request.form:
 				d['visit_id'] = db.session.query(models.Visit).filter_by(full_url=d['full_url'], public_ip=d['public_ip'], private_ip=d['private_ip']).order_by('-id').first().id
 				d['event_type'] = request.form['event_type'].lower()
@@ -246,10 +260,13 @@ def insert():
 		db.session.add(p)
 		db.session.commit()
 	except Exception as e:
-		print e
 		error = repr(e)
 		status = 'failure'
 	return jsonify(**{'status':status, 'description':error})
+
+
+
+
 
 def get_or_create(model, **kwargs):
 	instance = db.session.query(model).filter_by(**kwargs).first()
@@ -274,9 +291,6 @@ def getWebsite(base_):
 
 @application.route('/login',methods=['GET', 'POST'])
 def login():
-	# u, u_c = get_or_create(models.User, email='sinan@legionanalytics.com')
-	# u.pw_hash = generate_password_hash('dino9119')
-	# db.session.commit()
 	if request.method == 'POST':
 		email = request.form['email']
 		password = request.form['password']
