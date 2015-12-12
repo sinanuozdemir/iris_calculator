@@ -33,9 +33,7 @@ from collections import Counter
 
 website_re = re.compile("(https?://)?(www.)?([^\.]+)([\.\w]+)/?((\w+/?)*(\?[\w=]+)?)", re.IGNORECASE)
 
-def crossdomain(origin=None, methods=None, headers=None,
-                max_age=21600, attach_to_all=True,
-                automatic_options=True):
+def crossdomain(origin=None, methods=None, headers=None,max_age=21600, attach_to_all=True,automatic_options=True):
     if methods is not None:
         methods = ', '.join(sorted(x.upper() for x in methods))
     if headers is not None and not isinstance(headers, basestring):
@@ -414,6 +412,28 @@ def convertHTML():
 	soup.append(new_tag)
 	return jsonify(links=links, cleaned_html=(str(soup)), email=e)
 
+
+@application.route('/getNotifications',methods=['GET', 'OPTIONS'])
+@crossdomain(origin='*')
+def getNotifications():
+	# for v in db.session.query(models.Visit).all():
+	# 	v.notified = True
+	# db.session.commit()
+	notifications = {}
+	appid = getModel(models.App, appid = getAppIDForEmail(request.args['email'])).id
+	print appid
+	emails = [d.id for d in db.session.query(models.Email).filter_by(app_id = appid).all()]
+	links = [d.id for d in db.session.query(models.Link).filter_by(app_id = appid).all()]
+	print emails, links
+	emails = db.session.query(models.Visit.state, models.Visit.country, models.Visit.date).filter(models.Visit.email_id.in_(emails)).filter_by(notified=False).all()
+	links = db.session.query(models.Visit.state, models.Visit.country, models.Visit.date).filter(models.Visit.link_id.in_(links)).filter_by(notified=False).all()
+	n_e = []
+	for e in emails:
+		d = e.__dict__
+		del d['_labels']
+		d['minutes_ago'] = int((datetime.utcnow() - d['date']).total_seconds()/60)
+		n_e.append(d)
+	return jsonify(links=links, emails=n_e)
 
 application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jmN] sdfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
 

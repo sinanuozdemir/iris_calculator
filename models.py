@@ -86,6 +86,7 @@ class Visit(db.Model):
 	after = db.Column(db.String(1024), index=False, unique=False)
 	gets = db.Column(db.String(1024), index=False, unique=False)
 	events = relationship('Event', backref='event')
+	notified = db.Column(db.Boolean, index=False, unique=False, default = False)
 	date = db.Column(db.DateTime())
 	def __repr__(self):
 		return '<Visit %r>' % (self.public_ip)
