@@ -173,14 +173,15 @@ def _makeDBEmail(form_dict):
 	if app:
 		d = {}
 		created = False
-		d['app_id'] = form_dict['appid']
+		d['app_id'] = app.id
 		while not created:
 			random_email = 'ee'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(14))
 			d['emailid'] = random_email
 			for i in ['text', 'html', 'cc_address', 'bcc_address', 'to_address', 'from_address']:
 				if i in form_dict: d[i] = form_dict[i]
+			print d
 			e, created = get_or_create(models.Email, **d)
-		return {'success':True, 'email_id':random_email}
+		return {'success':True, 'email_id':random_email, 'tracking_link':'https://www.latracking.com/e/'+random_email}
 	return {'success':False}
 
 @application.route("/r/<path:l>", methods=['GET'])
@@ -304,10 +305,6 @@ def insert():
 		status = 'failure'
 	return jsonify(**{'status':status, 'description':error})
 
-
-
-
-
 def get_or_create(model, **kwargs):
 	instance = db.session.query(model).filter_by(**kwargs).first()
 	if instance:
@@ -412,7 +409,10 @@ def convertHTML():
 			cleaned = _makeDBLink(a['href'], appid)
 			links.append({'url':a.get('href'), 'text':a.text, 'cleaned':cleaned})
 			a['href'] = cleaned['latracking_url']
-	return jsonify(links=links, cleaned_html=(str(soup)))
+	e = _makeDBEmail({'appid':appid})
+	new_tag = soup.new_tag("img", src=e['tracking_link'], style="height: 1px; width:1px; display: none !important;")
+	soup.append(new_tag)
+	return jsonify(links=links, cleaned_html=(str(soup)), email=e)
 
 
 application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jmN] sdfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
