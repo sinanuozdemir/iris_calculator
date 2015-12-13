@@ -381,6 +381,9 @@ def test():
 def page_not_found(e):
 	return render_template('404.html'), 404
 
+@application.route('/emailToID',methods=['GET'])
+def emailToID():
+	return jsonify(appid=getAppIDForEmail(request.args['email']))
 
 def getAppIDForEmail(email):
 	u, t = get_or_create(models.User, email=email)
