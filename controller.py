@@ -135,13 +135,8 @@ def chart_data(appid):
 	resp = Response(js, status=200, mimetype='application/json')
 	return resp
 
-@application.route('/createLink', methods=['GET', 'POST'])
-def createLink():
-	if 'appid' in request.form:
-		return jsonify(**_makeDBLink(request.form['url'], request.form['appid']))
-	return jsonify(**{})
 
-def _makeDBLink(url, appid):
+def _makeDBLink(text, url, appid):
 	r = re.match(website_re, url)
 	if '.' not in r.group(4):
 		return jsonify( status='failure', reason='not a valid url')
@@ -156,7 +151,7 @@ def _makeDBLink(url, appid):
 		created = False
 		while not created:
 			random_link = 'll'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(14))
-			l, created = get_or_create(models.Link, app_id=app.id, linkid=random_link, url=u)
+			l, created = get_or_create(models.Link, app_id=app.id, linkid=random_link, url=u, text = text)
 		return {'success':True, 'link_id':random_link, 'url':u, 'latracking_url':'https://latracking.com/r/'+random_link}
 	return {'success':False}
 
@@ -416,7 +411,7 @@ def convertHTML():
 	soup = bs(html)
 	for a in soup.find_all('a'):
 		if a.get('href') and 'latracking.com/r/' not in a['href'].lower():
-			cleaned = _makeDBLink(a['href'], appid)
+			cleaned = _makeDBLink(a.text, a['href'], appid)
 			links.append({'url':a.get('href'), 'text':a.text, 'cleaned':cleaned})
 			a['href'] = cleaned['latracking_url']
 	d = {'appid':appid}
@@ -434,24 +429,25 @@ def getNotifications():
 		appid = getModel(models.App, appid = request.cookies.get('LATrackingID')).id
 	except:
 		return jsonify(**{})
-	emails = [{'email_d':d.id} for d in db.session.query(models.Email).filter_by(app_id = appid).all()]
-	links = [{'link_id':d.id} for d in db.session.query(models.Link).filter_by(app_id = appid).all()]
-	emails = db.session.query(models.Visit).filter(models.Visit.email_id.in_(emails.values())).filter_by(notified=False).all()
-	links = db.session.query(models.Visit).filter(models.Visit.link_id.in_(links.values())).filter_by(notified=False).all()
+	_emails = {d.id:d.subject for d in db.session.query(models.Email).filter_by(app_id = appid).all()}
+	_links = {d.id: d.text for d in db.session.query(models.Link).filter_by(app_id = appid).all()}
+	emails = db.session.query(models.Visit).filter(models.Visit.email_id.in_(_emails.keys())).filter_by(notified=False).all()
+	links = db.session.query(models.Visit).filter(models.Visit.link_id.in_(_links.keys())).filter_by(notified=False).all()
 	n_e, n_l = [], []
 	for e in emails:
 		d = {}
 		d['state'] = e.state
+		d['subject'] = _emails[e.email_id]
 		d['country'] = e.country
 		d['minutes_ago'] = int((datetime.utcnow() - e.date).total_seconds()/60)
 		n_e.append(d)
 	for l in links:
 		d = {}
 		d['state'] = l.state
+		d['text'] = _links[l.link_id]
 		d['country'] = l.country
 		d['minutes_ago'] = int((datetime.utcnow() - l.date).total_seconds()/60)
 		n_l.append(d)
-	print n_l, n_e
 	return jsonify(links=n_l, emails=n_e)
 
 application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
