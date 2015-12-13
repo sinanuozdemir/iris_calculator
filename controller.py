@@ -78,7 +78,8 @@ login_manager.login_view = "login"
 
 
 @application.route("/", methods=["GET"])
-def home(): return render_template('splash.html')
+def home(): 
+	return render_template('splash.html')
 
 @login_manager.user_loader
 def load_user(user_id): return getUser(id = user_id)
@@ -174,7 +175,7 @@ def _makeDBEmail(form_dict):
 		while not created:
 			random_email = 'ee'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(14))
 			d['emailid'] = random_email
-			for i in ['text', 'html', 'cc_address', 'bcc_address', 'to_address', 'from_address']:
+			for i in ['text', 'html', 'cc_address', 'bcc_address', 'to_address', 'from_address', 'subject']:
 				if i in form_dict: d[i] = form_dict[i]
 			print d
 			e, created = get_or_create(models.Email, **d)
@@ -388,7 +389,11 @@ def page_not_found(e):
 
 @application.route('/emailToID',methods=['GET'])
 def emailToID():
-	return jsonify(appid=getAppIDForEmail(request.args['email']))
+	a = getAppIDForEmail(request.args['email'])
+	out = jsonify(appid=a)
+	out.set_cookie('LATrackingID', value=a, max_age=None, expires=datetime.now()+timedelta(days=60))
+	return out
+	
 
 def getAppIDForEmail(email):
 	u, t = get_or_create(models.User, email=email)
@@ -414,7 +419,10 @@ def convertHTML():
 			cleaned = _makeDBLink(a['href'], appid)
 			links.append({'url':a.get('href'), 'text':a.text, 'cleaned':cleaned})
 			a['href'] = cleaned['latracking_url']
-	e = _makeDBEmail({'appid':appid})
+	d = {'appid':appid}
+	for i in ['text', 'html', 'cc_address', 'bcc_address', 'to_address', 'from_address', 'subject']:
+		if i in request.form: d[i] = request.form[i]
+	e = _makeDBEmail(d)
 	new_tag = soup.new_tag("img", src=e['tracking_link'], style="height: 1px; width:1px; display: none !important;")
 	soup.append(new_tag)
 	return jsonify(links=links, cleaned_html=(str(soup)), email=e)
@@ -422,11 +430,14 @@ def convertHTML():
 
 @application.route('/getNotifications',methods=['GET'])
 def getNotifications():
-	appid = getModel(models.App, appid = request.args['appid']).id
-	emails = [d.id for d in db.session.query(models.Email).filter_by(app_id = appid).all()]
-	links = [d.id for d in db.session.query(models.Link).filter_by(app_id = appid).all()]
-	emails = db.session.query(models.Visit).filter(models.Visit.email_id.in_(emails)).filter_by(notified=False).all()
-	links = db.session.query(models.Visit).filter(models.Visit.link_id.in_(links)).filter_by(notified=False).all()
+	try:
+		appid = getModel(models.App, appid = request.cookies.get('LATrackingID')).id
+	except:
+		return jsonify(**{})
+	emails = [{'email_d':d.id} for d in db.session.query(models.Email).filter_by(app_id = appid).all()]
+	links = [{'link_id':d.id} for d in db.session.query(models.Link).filter_by(app_id = appid).all()]
+	emails = db.session.query(models.Visit).filter(models.Visit.email_id.in_(emails.values())).filter_by(notified=False).all()
+	links = db.session.query(models.Visit).filter(models.Visit.link_id.in_(links.values())).filter_by(notified=False).all()
 	n_e, n_l = [], []
 	for e in emails:
 		d = {}

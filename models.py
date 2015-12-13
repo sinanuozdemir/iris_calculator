@@ -50,6 +50,7 @@ class Email(db.Model):
 	from_address = db.Column(db.Text(), index=True)
 	cc_address = db.Column(db.Text(), index=True)
 	bcc_address = db.Column(db.Text(), index=True)
+	subject = db.Column(db.Text(), index=True)
 	opens = relationship('Visit', backref='email')
 	app_id = db.Column(db.Integer, db.ForeignKey("app.id"), nullable=True)
 
