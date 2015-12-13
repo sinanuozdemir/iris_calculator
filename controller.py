@@ -246,7 +246,12 @@ def insert():
 	error = 'tracked visit. Nothing more to see here'
 	status = 'success'
 	try:
-		if 'appid' in request.form and 'HTTP_REFERER' in request.environ:
+		d = {}
+		d['private_ip'] = request.environ.get('REMOTE_ADDR')
+		d['public_ip'] = request.environ.get('HTTP_X_FORWARDED_FOR')
+		d['full_url'] = request.environ.get('HTTP_REFERER', '').strip().lower()
+		print request.environ, 'HTTP_REFERER' in request.environ
+		if 'appid' in request.form:
 			if 'event' in request.form:
 				d['visit_id'] = db.session.query(models.Visit).filter_by(full_url=d['full_url'], public_ip=d['public_ip'], private_ip=d['private_ip']).order_by('-id').first().id
 				d['event_type'] = request.form['event_type'].lower()
