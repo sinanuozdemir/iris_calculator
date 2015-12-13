@@ -417,7 +417,7 @@ def convertHTML():
 
 @application.route('/getNotifications',methods=['GET'])
 def getNotifications():
-	appid = getModel(models.App, appid = getAppIDForEmail(request.args['email'])).id
+	appid = getModel(models.App, appid = request.args['appid']).id
 	emails = [d.id for d in db.session.query(models.Email).filter_by(app_id = appid).all()]
 	links = [d.id for d in db.session.query(models.Link).filter_by(app_id = appid).all()]
 	emails = db.session.query(models.Visit).filter(models.Visit.email_id.in_(emails)).filter_by(notified=False).all()
