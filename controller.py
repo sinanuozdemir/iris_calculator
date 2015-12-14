@@ -426,7 +426,7 @@ def getAppIDForEmail(email):
 @application.route('/convertHTML',methods=['POST', 'OPTIONS'])
 @crossdomain(origin='*')
 def convertHTML():
-	if not request.form.get('appid') or 'email' not in request.form:
+	if 'appid' not in request.form or 'email' not in request.form:
 		return jsonify(success=False, reason='need email and tracking_id')
 	u = getModel(models.App, appid = request.form.get('appid')).user
 	if not u.is_verified or not request.form['email'] == u.email:
