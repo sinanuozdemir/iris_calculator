@@ -429,6 +429,7 @@ def getAppIDForEmail(email):
 @application.route('/convertHTML',methods=['POST', 'OPTIONS'])
 @crossdomain(origin='*')
 def convertHTML():
+	print request.cookies.get('LATrackingID'), "converthtml cookie"
 	if not request.cookies.get('LATrackingID') or 'email' not in request.form:
 		return jsonify(success=False, reason='need email and tracking_id')
 	u = getModel(models.App, appid = request.cookies.get('LATrackingID')).user
