@@ -175,7 +175,6 @@ def _makeDBEmail(form_dict):
 			d['emailid'] = random_email
 			for i in ['text', 'html', 'cc_address', 'bcc_address', 'to_address', 'from_address', 'subject']:
 				if i in form_dict: d[i] = form_dict[i]
-			print d
 			e, created = get_or_create(models.Email, **d)
 		return {'success':True, 'email_id':random_email, 'tracking_link':'https://www.latracking.com/e/'+random_email}
 	return {'success':False}
@@ -249,7 +248,6 @@ def insert():
 		d['private_ip'] = request.environ.get('REMOTE_ADDR')
 		d['public_ip'] = request.environ.get('HTTP_X_FORWARDED_FOR')
 		d['full_url'] = request.environ.get('HTTP_REFERER', '').strip().lower()
-		print request.environ, 'HTTP_REFERER' in request.environ
 		if 'appid' in request.form:
 			if 'event' in request.form:
 				d['visit_id'] = db.session.query(models.Visit).filter_by(full_url=d['full_url'], public_ip=d['public_ip'], private_ip=d['private_ip']).order_by('-id').first().id
@@ -406,7 +404,6 @@ def page_not_found(e):
 @application.route('/setItDown',methods=['GET'])
 @login_required
 def setItDown():
-	print current_user.email
 	a = getAppIDForEmail(current_user.email)
 	out = jsonify(appid=a)
 	out.set_cookie('LATrackingID', value=a, max_age=None, expires=datetime.now()+timedelta(days=60))
@@ -455,7 +452,7 @@ def convertHTML():
 
 @application.route('/getNotifications',methods=['GET'])
 def getNotifications():
-	print request.cookies.get('LATrackingID')
+	print request.cookies.get('LATrackingID'), "notifications cookie"
 	try:
 		appid = getModel(models.App, appid = request.cookies.get('LATrackingID')).id
 	except:
@@ -479,7 +476,7 @@ def getNotifications():
 		d['country'] = l.country
 		d['minutes_ago'] = int((datetime.utcnow() - l.date).total_seconds()/60)
 		n_l.append(d)
-	return jsonify(links=n_l, emails=n_e)
+	return jsonify(links=n_l, emails=n_e, appid=request.cookies.get('LATrackingID'))
 
 application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
 
