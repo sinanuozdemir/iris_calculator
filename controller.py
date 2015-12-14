@@ -415,11 +415,12 @@ def setItDown():
 
 def getAppIDForEmail(email):
 	u, t = get_or_create(models.User, email=email)
+	apps = db.session.query(models.App).filter_by(user = u).all()
 	if len(apps):
 		return apps[0].appid
 	random_appid = 'aa'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(14))
 	app_created = False
-	apps = db.session.query(models.App).filter_by(user = u).all()
+	
 	w, w_c = get_or_create(models.Website, base=email.split('@')[1].lower().strip())
 	while not app_created:
 		app, app_created = get_or_create(models.App, appid=random_appid, user=u, user_id=u.id, website = w)
@@ -429,9 +430,10 @@ def getAppIDForEmail(email):
 @crossdomain(origin='*')
 def convertHTML():
 	if not request.cookies.get('LATrackingID') or 'email' not in request.form:
-		return jsonify(**{})
-	if not request.form['email'] == getModel(models.App, appid = request.cookies.get('LATrackingID')).user.email:
-		return jsonify(**{})
+		return jsonify(success=False, reason='need email and tracking_id')
+	u = getModel(models.App, appid = request.cookies.get('LATrackingID')).user
+	if not u.is_verified or not request.form['email'] == u.email:
+		return jsonify(success=False, reason='not verified or wrong email')
 	appid = getAppIDForEmail(request.form['email'])
 	html = request.form['html']
 	links = []
@@ -447,7 +449,7 @@ def convertHTML():
 	e = _makeDBEmail(d)
 	new_tag = soup.new_tag("img", src=e['tracking_link'], style="height: 1px; width:1px; display: none !important;")
 	soup.append(new_tag)
-	return jsonify(links=links, cleaned_html=(str(soup)), email=e)
+	return jsonify(success=True, links=links, cleaned_html=(str(soup)), email=e)
 
 
 @application.route('/getNotifications',methods=['GET'])
