@@ -20,6 +20,8 @@ class User(db.Model):
 	apps_allowed = db.Column(db.Integer, default = 0)
 	nickname = db.Column(db.String(64), index=True, unique=True)
 	first_name = db.Column(db.String(64), index=True, unique=True)
+	login_check = db.Column(db.String(64), index=True, unique=True)
+	is_verified = db.Column(db.Boolean, index=False, unique=False)
 	pw_hash = db.Column(db.String(512), index=True, unique=True)
 	email = db.Column(db.String(120), index=True, unique=True)
 	is_authenticated = db.Column(db.Boolean, index=False, unique=False)

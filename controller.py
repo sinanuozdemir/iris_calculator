@@ -1,7 +1,8 @@
 # coding: utf-8
 from urllib import quote_plus
 from datetime import timedelta
-from flask import make_response, request, current_app
+from flask import make_response, request, current_app, Flask
+from flask_mail import Mail, Message
 from functools import update_wrapper
 from bs4 import BeautifulSoup as bs
 import itertools
@@ -21,6 +22,8 @@ application = Flask(__name__)
 application.config.from_object('config')
 CORS(application)
 login_manager.init_app(application)
+mail = Mail(application)
+
 from user_agents import parse
 db = SQLAlchemy(application)
 import models
@@ -322,7 +325,13 @@ def getUser(**kwargs):
 def getWebsite(base_):
 	return db.session.query(models.Website).filter(models.Website.base.like(base_)).first()
 
-
+@application.route("/v/<path:v>", methods=['GET'])
+def verify(v):
+	u = getModel(models.User, login_check = v)
+	if u:
+		u.is_verified = True
+		db.session.commit()
+	return jsonify(**{})
 
 @application.route('/login',methods=['GET', 'POST'])
 def login():
@@ -338,8 +347,13 @@ def login():
 				u.pw_hash = generate_password_hash(password)
 				u.is_active = True
 				u.is_authenticated = True
+				u.is_verified = False
+				u.login_check = 'uu'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(30))
 				db.session.add(u)
 				db.session.commit()
+				msg = Message("Click me", sender="verifications@latracking.com", recipients=[email])
+				msg.html = '<b>click me <a href="https://latracking.com/v/'+u.login_check+'">click me</a></b>'
+				mail.send(msg)
 				login_user(u, remember=True, force=True, fresh=False)
 			return redirect('/test')
 		else:
@@ -352,7 +366,11 @@ def login():
 
 @application.route('/check',methods=['GET'])
 def check():
-	pass
+	msg = Message("Click me",
+	sender="verifications@latracking.com",
+	recipients=['sinan@legionanalytics.com'])
+	msg.html = '<b>click me <a href="https://latracking.com/v/'+'skjvnlvhdxfg'+'">click me</a></b>'
+	mail.send(msg)
 
 
 
@@ -382,9 +400,10 @@ def test():
 def page_not_found(e):
 	return render_template('404.html'), 404
 
-@application.route('/emailToID',methods=['GET'])
-def emailToID():
-	a = getAppIDForEmail(request.args['email'])
+@application.route('/setItDown',methods=['GET'])
+@login_required
+def setItDown():
+	a = getAppIDForEmail(current_user.email)
 	out = jsonify(appid=a)
 	out.set_cookie('LATrackingID', value=a, max_age=None, expires=datetime.now()+timedelta(days=60), domain='.latracking.com' )
 	return out
