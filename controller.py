@@ -386,7 +386,7 @@ def page_not_found(e):
 def emailToID():
 	a = getAppIDForEmail(request.args['email'])
 	out = jsonify(appid=a)
-	out.set_cookie('LATrackingID', value=a, max_age=None, expires=datetime.now()+timedelta(days=60))
+	out.set_cookie('LATrackingID', value=a, max_age=None, expires=datetime.now()+timedelta(days=60), domain='.latracking.com' )
 	return out
 	
 
@@ -425,6 +425,7 @@ def convertHTML():
 
 @application.route('/getNotifications',methods=['GET'])
 def getNotifications():
+	print request.cookies.get('LATrackingID')
 	try:
 		appid = getModel(models.App, appid = request.cookies.get('LATrackingID')).id
 	except:
