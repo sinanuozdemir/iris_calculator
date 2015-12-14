@@ -348,11 +348,12 @@ def login():
 				u.is_active = True
 				u.is_authenticated = True
 				u.is_verified = False
-				u.login_check = 'uu'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(30))
+				login_check_ = 'uu'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(30))
+				u.login_check = login_check_
 				db.session.add(u)
 				db.session.commit()
 				msg = Message("Click me", sender="verifications@latracking.com", recipients=[email])
-				msg.html = '<b>click me <a href="https://latracking.com/v/'+u.login_check+'">click me</a></b>'
+				msg.html = '<b><a href="https://latracking.com/v/'+login_check_+'">click me</a></b>'
 				mail.send(msg)
 				login_user(u, remember=True, force=True, fresh=False)
 			return redirect('/test')
