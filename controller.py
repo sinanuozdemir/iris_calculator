@@ -331,6 +331,8 @@ def verify(v):
 	if u:
 		u.is_verified = True
 		db.session.commit()
+		login_user(u, remember=True, force=True, fresh=False)
+		setItDown()
 	return jsonify(**{})
 
 @application.route('/login',methods=['GET', 'POST'])
