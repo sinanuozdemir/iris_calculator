@@ -406,19 +406,20 @@ def page_not_found(e):
 @application.route('/setItDown',methods=['GET'])
 @login_required
 def setItDown():
+	print current_user.email
 	a = getAppIDForEmail(current_user.email)
 	out = jsonify(appid=a)
-	out.set_cookie('LATrackingID', value=a, max_age=None, expires=datetime.now()+timedelta(days=60), domain='.latracking.com' )
+	out.set_cookie('LATrackingID', value=a, max_age=None, expires=datetime.now()+timedelta(days=60))
 	return out
 	
 
 def getAppIDForEmail(email):
 	u, t = get_or_create(models.User, email=email)
+	if len(apps):
+		return apps[0].appid
 	random_appid = 'aa'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(14))
 	app_created = False
 	apps = db.session.query(models.App).filter_by(user = u).all()
-	if len(apps):
-		return apps[0].appid
 	w, w_c = get_or_create(models.Website, base=email.split('@')[1].lower().strip())
 	while not app_created:
 		app, app_created = get_or_create(models.App, appid=random_appid, user=u, user_id=u.id, website = w)
@@ -427,6 +428,10 @@ def getAppIDForEmail(email):
 @application.route('/convertHTML',methods=['POST', 'OPTIONS'])
 @crossdomain(origin='*')
 def convertHTML():
+	if not request.cookies.get('LATrackingID') or 'email' not in request.form:
+		return jsonify(**{})
+	if not request.form['email'] == getModel(models.App, appid = request.cookies.get('LATrackingID')).user.email:
+		return jsonify(**{})
 	appid = getAppIDForEmail(request.form['email'])
 	html = request.form['html']
 	links = []
