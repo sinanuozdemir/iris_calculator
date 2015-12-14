@@ -426,10 +426,9 @@ def getAppIDForEmail(email):
 @application.route('/convertHTML',methods=['POST', 'OPTIONS'])
 @crossdomain(origin='*')
 def convertHTML():
-	print request.cookies.get('LATrackingID'), "converthtml cookie"
-	if not request.cookies.get('LATrackingID') or 'email' not in request.form:
+	if not request.form.get('appid') or 'email' not in request.form:
 		return jsonify(success=False, reason='need email and tracking_id')
-	u = getModel(models.App, appid = request.cookies.get('LATrackingID')).user
+	u = getModel(models.App, appid = request.form.get('appid')).user
 	if not u.is_verified or not request.form['email'] == u.email:
 		return jsonify(success=False, reason='not verified or wrong email')
 	appid = getAppIDForEmail(request.form['email'])
@@ -452,7 +451,6 @@ def convertHTML():
 
 @application.route('/getNotifications',methods=['GET'])
 def getNotifications():
-	print request.cookies.get('LATrackingID'), "notifications cookie"
 	try:
 		appid = getModel(models.App, appid = request.cookies.get('LATrackingID')).id
 	except:
