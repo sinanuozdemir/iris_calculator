@@ -357,7 +357,7 @@ def login():
 
 @application.route('/check',methods=['GET'])
 def check():
-	modles.handleUsers()
+	modles.handleRandomUser()
 	
 	
 	

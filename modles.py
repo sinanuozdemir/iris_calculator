@@ -1,3 +1,5 @@
+import time
+import random
 from collections import Counter
 import googleAPI
 from controller import db
@@ -41,6 +43,12 @@ def handleUser(user_id = 21):
 def handleUsers():
 	for u in db.session.query(models.User.id).all():
 		print handleUser(u[0])
+
+def handleRandomUser():
+	u = random.sample(db.session.query(models.User.id).all(), 1)[0][0]
+	time.sleep(random.randint(4,10))
+	handleUser(u)
+	return True
 
 
 
