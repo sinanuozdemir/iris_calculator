@@ -1,4 +1,5 @@
 # coding: utf-8
+
 import googleAPI
 from datetime import timedelta
 from flask import make_response, request, current_app, Flask
@@ -22,20 +23,19 @@ from flask.ext.login import LoginManager, login_user, current_user, logout_user,
 login_manager = LoginManager()
 application = Flask(__name__)
 application.config.from_object('config')
-
 CORS(application)
 login_manager.init_app(application)
 mail = Mail(application)
-
 from user_agents import parse
 db = SQLAlchemy(application)
+import modules
+import modles
 import models
 import geocoder
 from random import randint
 import json
 from datetime import datetime
 from collections import Counter
-
 
 
 scheduler = APScheduler()
@@ -157,12 +157,12 @@ def _makeDBLink(email_id, text, url, appid):
 		u = r.group(1)
 	u+=r.group(3)+r.group(4)
 	if r.group(5): u += '/'+r.group(5)
-	app = getModel(models.App, appid=appid)
+	app = modules.getModel(models.App, appid=appid)
 	if app:
 		created = False
 		while not created:
 			random_link = 'll'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(62))
-			l, created = get_or_create(models.Link, app_id=app.id, linkid=random_link, email_id=email_id, url=u, text = text)
+			l, created = modules.get_or_create(models.Link, linkid=random_link, defaults = {'app_id':app.id, 'email_id':email_id, 'url':u, 'text': text})
 		return {'success':True, 'link_id':random_link, 'url':u, 'latracking_url':'https://latracking.com/r/'+random_link}
 	return {'success':False}
 
@@ -173,18 +173,17 @@ def createEmail():
 	return jsonify(**{})
 
 def _makeDBEmail(form_dict):
-	app = getModel(models.App, appid=form_dict['appid'])
+	app = modules.getModel(models.App, appid=form_dict['appid'])
 	if app:
 		d = {}
 		created = False
 		d['app_id'] = app.id
 		while not created:
 			random_email = 'ee'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(62))
-			d['emailid'] = random_email
-			for i in ['text', 'html', 'cc_address', 'bcc_address', 'to_address', 'from_address', 'subject']:
+			for i in ['google_message_id', 'google_thread_id', 'date_sent', 'text', 'html', 'cc_address', 'bcc_address', 'to_address', 'from_address', 'subject']:
 				if i in form_dict: d[i] = form_dict[i]
-			e, created = get_or_create(models.Email, **d)
-		return {'success':True, 'email':e, 'email_id':e.id, 'tracking_link':'https://www.latracking.com/e/'+random_email}
+			e, created = modules.get_or_create(models.Email, emailid=random_email, **d)
+		return {'success':True, 'email_id':e.id, 'tracking_link':'https://www.latracking.com/e/'+random_email}
 	return {'success':False}
 
 @application.route("/r/<path:l>", methods=['GET'])
@@ -269,7 +268,7 @@ def insert():
 				db.session.add(e)
 				db.session.commit()
 				return jsonify(**{'status':'success', 'description':'event recorded'})
-			app = getModel(models.App, appid = request.form['appid'])
+			app = modules.getModel(models.App, appid = request.form['appid'])
 			if not app:
 				return jsonify(**{'status':'failure', 'description':'no app found with that id'})
 			if app.website.base not in d['full_url']:
@@ -310,25 +309,13 @@ def insert():
 		status = 'failure'
 	return jsonify(**{'status':status, 'description':error})
 
-def get_or_create(model, **kwargs):
-	instance = db.session.query(model).filter_by(**kwargs).first()
-	if instance:
-		return instance, False
-	else:
-		instance = model(**kwargs)
-		db.session.add(instance)
-		db.session.commit()
-		return instance, True
-
-def getModel(model, **kwargs):
-	return db.session.query(model).filter_by(**kwargs).first()
 
 def getUser(**kwargs):
 	return db.session.query(models.User).filter_by(**kwargs).first()
 
 @application.route("/v/<path:v>", methods=['GET'])
 def verify(v):
-	u = getModel(models.User, login_check = v)
+	u = modules.getModel(models.User, login_check = v)
 	if u:
 		u.is_verified = True
 		db.session.commit()
@@ -343,7 +330,7 @@ def login():
 		password = request.form['password']
 		password2 = request.form.get('password2')
 		if password2 and password2 == password:
-			u, u_c = get_or_create(models.User, email=email)
+			u, u_c = modules.get_or_create(models.User, email=email)
 			if not u_c:
 				flash('Someone already owns this!')
 			else:
@@ -367,32 +354,10 @@ def login():
 				return redirect('/test')
 	return render_template('login.html')
 
-def checkForReplies(threadId, access_token, from_ = 'google'):
-	if from_ == 'google':
-		for message in googleAPI.getThreadMessages(threadId, access_token):
-			g = googleAPI.cleanMessage(message)
-			if not getModel(models.Email, google_message_id=g['google_message_id']):
-				get_or_create(models.Email, **g)
-
-def getUnrepliedThreadsOfUser(user_id, from_ = 'google'):
-	app = db.session.query(models.App).filter_by(user_id=user_id).first()
-	emails = db.session.query(models.Email).filter_by(app_id=app.id).all()
-	if from_ == 'google':
-		ids = [e.google_thread_id for e in emails]
-		messages = [e.google_thread_id for e in db.session.query(models.Email).filter(models.Email.google_thread_id.in_(ids))]
-		return [k for k, v in Counter(messages).iteritems() if v == 1 ]
-
-def handleUser(user_id = 21):
-	access_token = userGoogleAPI(db.session.query(models.User).filter_by(id=user_id).first())
-	for threadId in getUnrepliedThreadsOfUser(user_id):
-		print threadId
-		checkForReplies(threadId, access_token, from_ = 'google')
-	return jsonify(status='done')
-
 
 @application.route('/check',methods=['GET'])
 def check():
-	handleUser()
+	modles.handleUsers()
 	
 	
 	
@@ -404,13 +369,13 @@ def check():
 def test():
 	if request.method == 'POST':
 		if 'delete' in request.form:
-			a = get_or_create(models.App, appid=request.form['delete'])[0]
+			a = modules.get_or_create(models.App, appid=request.form['delete'])[0]
 			db.session.delete(a)
 			db.session.commit()
 		elif 'site_to_track' in request.form:
 			base = request.form['site_to_track'].replace('https://','').replace('http://','').replace('www.','').replace('/','').lower().strip()
-			w, w_c = get_or_create(models.Website, base=base)
-			a = getModel(models.App, website = w)
+			w, w_c = modules.get_or_create(models.Website, base=base)
+			a = modules.getModel(models.App, website = w)
 			if a: flash('Someone already owns this website!', 'error')
 			else:	
 				a = models.App(appid = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(20)), user = current_user, website = w)
@@ -426,16 +391,16 @@ def page_not_found(e):
 	return render_template('404.html'), 404
 
 def getAppIDForEmail(email):
-	u, t = get_or_create(models.User, email=email)
+	u, t = modules.get_or_create(models.User, email=email)
 	apps = db.session.query(models.App).filter_by(user = u).all()
 	if len(apps):
 		return apps[0].appid
 	random_appid = 'aa'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(62))
 	app_created = False
 	
-	w, w_c = get_or_create(models.Website, base=email.split('@')[1].lower().strip())
+	w, w_c = modules.get_or_create(models.Website, base=email.split('@')[1].lower().strip())
 	while not app_created:
-		app, app_created = get_or_create(models.App, appid=random_appid, user=u, user_id=u.id, website = w)
+		app, app_created = modules.get_or_create(models.App, appid=random_appid, defaults = {'user':u, 'user_id':u.id, 'website': w})
 	return random_appid
 
 
@@ -449,13 +414,6 @@ def setItDown():
 	return out
 	
 
-def userGoogleAPI(user):
-	new_token = googleAPI.refreshAccessToken(user.google_access_token, user.google_refresh_token)
-	if user.google_access_token != new_token:
-		print "new token"
-		user.google_access_token = new_token
-		db.session.commit()
-	return user.google_access_token
 
 
 @application.route('/convertHTML',methods=['POST', 'OPTIONS'])
@@ -464,10 +422,9 @@ def convertHTML():
 	if 'appid' not in request.form:
 		return jsonify(success=False, reason='need tracking_id')
 	appid = request.form['appid']
-	u = getModel(models.App, appid = request.form.get('appid')).user
+	u = modules.getModel(models.App, appid = request.form.get('appid')).user
 	if not u.is_verified:
 		return jsonify(success=False, reason='not verified')
-	
 	html = request.form['html']
 	links = []
 	soup = bs(html)
@@ -475,8 +432,6 @@ def convertHTML():
 	for i in ['text', 'html', 'cc_address', 'bcc_address', 'to_address', 'from_address', 'subject']:
 		if i in request.form: d[i] = request.form[i]
 	e = _makeDBEmail(d)
-	email = e['email']
-	del e['email']
 	for a in soup.find_all('a'):
 		if a.get('href') and 'latracking.com/r/' not in a['href'].lower():
 			cleaned = _makeDBLink(e['email_id'], a.text, a['href'], appid)
@@ -485,12 +440,20 @@ def convertHTML():
 	new_tag = soup.new_tag("img", src=e['tracking_link'], style="height: 1px; width:1px; display: none !important;")
 	soup.append(new_tag)
 	if 'send' in request.form and 'to_address' in request.form:
-		access_token = userGoogleAPI(u)
+		access_token = modles.userGoogleAPI(u)
 		response = googleAPI.sendEmail(email = u.google_email, access_token = access_token, to_address = d['to_address'], subject = d.get('subject', ''), bcc_address = d.get('bcc_address', ''), html = str(soup))
 		print response
+		email = db.session.query(models.Email).filter_by(id=e['email_id']).first()
 		email.google_message_id = response['id']
 		email.google_thread_id = response['threadId']
 		email.date_sent = datetime.utcnow()
+		# db.session.query(models.Email).filter(id==e['email_id']).update(
+		# 	{
+		# 	'google_message_id': response['id'],
+		# 	'google_thread_id': response['threadId'],
+		# 	'date_sent': datetime.utcnow()
+		# 	}
+		# )
 		db.session.commit()
 	return jsonify(success=True, links=links, cleaned_html=str(soup), email=e)
 
@@ -549,11 +512,11 @@ def getInfoOnEmails():
 def getNotifications():
 	if 'appid' in request.form:
 		long_id = request.form['appid']
-		appid = getModel(models.App, appid = request.form.get('appid')).id
+		appid = modules.getModel(models.App, appid = request.form.get('appid')).id
 		print appid
 	elif 'LATrackingID' in request.cookies:
 		long_id = request.cookies.get('LATrackingID')
-		appid = getModel(models.App, appid = request.cookies.get('LATrackingID')).id
+		appid = modules.getModel(models.App, appid = request.cookies.get('LATrackingID')).id
 	else:
 		return jsonify(**{})
 	_emails = {d.id:d.subject for d in db.session.query(models.Email).filter_by(app_id = appid).all()}
