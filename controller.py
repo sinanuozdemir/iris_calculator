@@ -504,7 +504,7 @@ def getInfoOnEmails():
 	email_ids = [a.strip() for a in request.form['emails'].split(',')]
 	a = db.session.query(models.App).filter_by(appid=request.form['appid']).first().id
 	emails = db.session.query(models.Email).filter(models.Email.emailid.in_(email_ids)).filter_by(app_id=a).all()
-	emails = [{'links':[{'link':cleanLink(l), 'opens':map(cleanVisit,e.opens[-3:])} for l in e.links], 'email':cleanEmail(e), 'opens':map(cleanVisit,e.opens[-3:])} for e in emails]
+	emails = [{'links':[{'link':cleanLink(l), 'opens':map(cleanVisit,l.opens[-3:])} for l in e.links], 'email':cleanEmail(e), 'opens':map(cleanVisit,e.opens[-3:])} for e in emails]
 	return jsonify(success=True, emails = emails)
 
 
