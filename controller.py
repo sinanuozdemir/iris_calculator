@@ -504,8 +504,11 @@ def getInfoOnEmails():
 	email_ids = [a.strip() for a in request.form['emails'].split(',')]
 	a = db.session.query(models.App).filter_by(appid=request.form['appid']).first().id
 	emails = db.session.query(models.Email).filter(models.Email.emailid.in_(email_ids)).filter_by(app_id=a).all()
-	emails = [{'links':[{'link':cleanLink(l), 'opens':map(cleanVisit,l.opens[-3:])} for l in e.links], 'email':cleanEmail(e), 'opens':map(cleanVisit,e.opens[-3:])} for e in emails]
-	return jsonify(success=True, emails = emails)
+	# ids = [e.google_thread_id for e in emails]
+	# messages = [e.google_thread_id for e in db.session.query(models.Email).filter(models.Email.google_thread_id.in_(ids))]
+	# return [k for k, v in Counter(messages).iteritems() if v == 1 ]
+	emails_ = [{'links':[{'link':cleanLink(l), 'opens':map(cleanVisit,l.opens[-3:])} for l in e.links], 'email':cleanEmail(e), 'opens':map(cleanVisit,e.opens[-3:])} for e in emails]
+	return jsonify(success=True, emails = emails_)
 
 
 @application.route('/getNotifications',methods=['GET', 'POST'])
