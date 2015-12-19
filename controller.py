@@ -1,8 +1,9 @@
 # coding: utf-8
-from urllib import quote_plus
+import googleAPI
 from datetime import timedelta
 from flask import make_response, request, current_app, Flask
 from flask_mail import Mail, Message
+from flask_apscheduler import APScheduler
 from functools import update_wrapper
 from bs4 import BeautifulSoup as bs
 import itertools
@@ -20,6 +21,8 @@ from flask.ext.login import LoginManager, login_user, current_user, logout_user,
 login_manager = LoginManager()
 application = Flask(__name__)
 application.config.from_object('config')
+scheduler = APScheduler()
+
 CORS(application)
 login_manager.init_app(application)
 mail = Mail(application)
@@ -32,6 +35,23 @@ from random import randint
 import json
 from datetime import datetime
 from collections import Counter
+
+
+class Config(object):
+	JOBS = [
+		{
+			'id': 'handleUser',
+			'func': '__main__:handleUser',
+			# 'args': (1, 2),
+			'trigger': 'interval',
+			'seconds': 10
+		}
+	]
+
+	SCHEDULER_VIEWS_ENABLED = True
+
+scheduler.init_app(application)
+scheduler.start()
 
 website_re = re.compile("(https?://)?(www.)?([^\.]+)([\.\w]+)/?((\w+/?)*(\?[\w=]+)?)", re.IGNORECASE)
 
@@ -138,8 +158,7 @@ def chart_data(appid):
 	resp = Response(js, status=200, mimetype='application/json')
 	return resp
 
-
-def _makeDBLink(text, url, appid):
+def _makeDBLink(email_id, text, url, appid):
 	r = re.match(website_re, url)
 	if '.' not in r.group(4):
 		return jsonify( status='failure', reason='not a valid url')
@@ -153,8 +172,8 @@ def _makeDBLink(text, url, appid):
 	if app:
 		created = False
 		while not created:
-			random_link = 'll'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(14))
-			l, created = get_or_create(models.Link, app_id=app.id, linkid=random_link, url=u, text = text)
+			random_link = 'll'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(62))
+			l, created = get_or_create(models.Link, app_id=app.id, linkid=random_link, email_id=email_id, url=u, text = text)
 		return {'success':True, 'link_id':random_link, 'url':u, 'latracking_url':'https://latracking.com/r/'+random_link}
 	return {'success':False}
 
@@ -171,12 +190,12 @@ def _makeDBEmail(form_dict):
 		created = False
 		d['app_id'] = app.id
 		while not created:
-			random_email = 'ee'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(14))
+			random_email = 'ee'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(62))
 			d['emailid'] = random_email
 			for i in ['text', 'html', 'cc_address', 'bcc_address', 'to_address', 'from_address', 'subject']:
 				if i in form_dict: d[i] = form_dict[i]
 			e, created = get_or_create(models.Email, **d)
-		return {'success':True, 'email_id':random_email, 'tracking_link':'https://www.latracking.com/e/'+random_email}
+		return {'success':True, 'email':e, 'email_id':e.id, 'tracking_link':'https://www.latracking.com/e/'+random_email}
 	return {'success':False}
 
 @application.route("/r/<path:l>", methods=['GET'])
@@ -236,8 +255,6 @@ def emailOpen(e):
 	db.session.add(p)
 	db.session.commit()
 	return jsonify(success=True, description='successfully tracked email')
-
-
 
 @application.route('/insert', methods=['GET', 'POST'])
 def insert():
@@ -320,9 +337,6 @@ def getModel(model, **kwargs):
 def getUser(**kwargs):
 	return db.session.query(models.User).filter_by(**kwargs).first()
 
-def getWebsite(base_):
-	return db.session.query(models.Website).filter(models.Website.base.like(base_)).first()
-
 @application.route("/v/<path:v>", methods=['GET'])
 def verify(v):
 	u = getModel(models.User, login_check = v)
@@ -364,14 +378,35 @@ def login():
 				return redirect('/test')
 	return render_template('login.html')
 
+def checkForReplies(threadId, access_token, from_ = 'google'):
+	if from_ == 'google':
+		for message in googleAPI.getThreadMessages(threadId, access_token):
+			g = googleAPI.cleanMessage(message)
+			if not getModel(models.Email, google_message_id=g['google_message_id']):
+				get_or_create(models.Email, **g)
+
+def getUnrepliedThreadsOfUser(user_id, from_ = 'google'):
+	app = db.session.query(models.App).filter_by(user_id=user_id).first()
+	emails = db.session.query(models.Email).filter_by(app_id=app.id).all()
+	if from_ == 'google':
+		ids = [e.google_thread_id for e in emails]
+		messages = [e.google_thread_id for e in db.session.query(models.Email).filter(models.Email.google_thread_id.in_(ids))]
+		return [k for k, v in Counter(messages).iteritems() if v == 1 ]
+
+def handleUser(user_id = 21):
+	access_token = userGoogleAPI(db.session.query(models.User).filter_by(id=user_id).first())
+	for threadId in getUnrepliedThreadsOfUser(user_id):
+		print threadId
+		checkForReplies(threadId, access_token, from_ = 'google')
+	return jsonify(status='done')
+
 
 @application.route('/check',methods=['GET'])
 def check():
-	msg = Message("Click me",
-	sender="verifications@latracking.com",
-	recipients=['sinan@legionanalytics.com'])
-	msg.html = '<b>click me <a href="https://latracking.com/v/'+'skjvnlvhdxfg'+'">click me</a></b>'
-	mail.send(msg)
+	handleUser()
+	
+	
+	
 
 
 
@@ -401,21 +436,12 @@ def test():
 def page_not_found(e):
 	return render_template('404.html'), 404
 
-@application.route('/setItDown',methods=['GET'])
-@login_required
-def setItDown():
-	a = getAppIDForEmail(current_user.email)
-	out = jsonify(appid=a)
-	out.set_cookie('LATrackingID', value=a, max_age=None, expires=datetime.now()+timedelta(days=60))
-	return out
-	
-
 def getAppIDForEmail(email):
 	u, t = get_or_create(models.User, email=email)
 	apps = db.session.query(models.App).filter_by(user = u).all()
 	if len(apps):
 		return apps[0].appid
-	random_appid = 'aa'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(14))
+	random_appid = 'aa'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(62))
 	app_created = False
 	
 	w, w_c = get_or_create(models.Website, base=email.split('@')[1].lower().strip())
@@ -423,37 +449,123 @@ def getAppIDForEmail(email):
 		app, app_created = get_or_create(models.App, appid=random_appid, user=u, user_id=u.id, website = w)
 	return random_appid
 
+
+
+@application.route('/setItDown',methods=['GET'])
+@login_required
+def setItDown():
+	a = getAppIDForEmail(current_user.email)
+	out = jsonify(appid=a)
+	out.set_cookie('LATrackingID', value=a, max_age=None, expires=datetime.now()+timedelta(days=365))
+	return out
+	
+
+def userGoogleAPI(user):
+	new_token = googleAPI.refreshAccessToken(user.google_access_token, user.google_refresh_token)
+	if user.google_access_token != new_token:
+		print "new token"
+		user.google_access_token = new_token
+		db.session.commit()
+	return user.google_access_token
+
+
 @application.route('/convertHTML',methods=['POST', 'OPTIONS'])
 @crossdomain(origin='*')
 def convertHTML():
-	if 'appid' not in request.form or 'email' not in request.form:
-		return jsonify(success=False, reason='need email and tracking_id')
+	if 'appid' not in request.form:
+		return jsonify(success=False, reason='need tracking_id')
+	appid = request.form['appid']
 	u = getModel(models.App, appid = request.form.get('appid')).user
-	if not u.is_verified or not request.form['email'] == u.email:
-		return jsonify(success=False, reason='not verified or wrong email')
-	appid = getAppIDForEmail(request.form['email'])
+	if not u.is_verified:
+		return jsonify(success=False, reason='not verified')
+	
 	html = request.form['html']
 	links = []
 	soup = bs(html)
-	for a in soup.find_all('a'):
-		if a.get('href') and 'latracking.com/r/' not in a['href'].lower():
-			cleaned = _makeDBLink(a.text, a['href'], appid)
-			links.append({'url':a.get('href'), 'text':a.text, 'cleaned':cleaned})
-			a['href'] = cleaned['latracking_url']
 	d = {'appid':appid}
 	for i in ['text', 'html', 'cc_address', 'bcc_address', 'to_address', 'from_address', 'subject']:
 		if i in request.form: d[i] = request.form[i]
 	e = _makeDBEmail(d)
+	email = e['email']
+	del e['email']
+	for a in soup.find_all('a'):
+		if a.get('href') and 'latracking.com/r/' not in a['href'].lower():
+			cleaned = _makeDBLink(e['email_id'], a.text, a['href'], appid)
+			links.append({'url':a.get('href'), 'text':a.text, 'cleaned':cleaned})
+			a['href'] = cleaned['latracking_url']
 	new_tag = soup.new_tag("img", src=e['tracking_link'], style="height: 1px; width:1px; display: none !important;")
 	soup.append(new_tag)
-	return jsonify(success=True, links=links, cleaned_html=(str(soup)), email=e)
+	if 'send' in request.form and 'to_address' in request.form:
+		access_token = userGoogleAPI(u)
+		response = googleAPI.sendEmail(email = u.google_email, access_token = access_token, to_address = d['to_address'], subject = d.get('subject', ''), bcc_address = d.get('bcc_address', ''), html = str(soup))
+		print response
+		email.google_message_id = response['id']
+		email.google_thread_id = response['threadId']
+		email.date_sent = datetime.utcnow()
+		db.session.commit()
+	return jsonify(success=True, links=links, cleaned_html=str(soup), email=e)
 
 
-@application.route('/getNotifications',methods=['GET'])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+############################
+####### Notifications ######
+############################
+
+def cleanVisit(visit):
+	d = {}
+	d['state'] = visit.state
+	d['country'] = visit.country
+	d['city'] = visit.city
+	d['public_ip'] = visit.public_ip
+	d['minutes_ago'] = int((datetime.utcnow() - visit.date).total_seconds()/60)
+	return d
+
+def cleanEmail(e):
+	d = {}
+	d['subject'] = e.subject
+	d['emailid'] = e.emailid
+	return d
+
+def cleanLink(e):
+	d = {}
+	d['url'] = e.url
+	d['text'] = e.text
+	return d
+
+@application.route('/getInfoOnEmails',methods=['POST'])
+def getInfoOnEmails():
+	if 'appid' not in request.form or 'emails' not in request.form:
+		return jsonify(success=False, reason='appid not in POST')
+	email_ids = [a.strip() for a in request.form['emails'].split(',')]
+	a = db.session.query(models.App).filter_by(appid=request.form['appid']).first().id
+	emails = db.session.query(models.Email).filter(models.Email.emailid.in_(email_ids)).filter_by(app_id=a).all()
+	emails = [{'links':[{'link':cleanLink(l), 'opens':map(cleanVisit,e.opens[-3:])} for l in e.links], 'email':cleanEmail(e), 'opens':map(cleanVisit,e.opens[-3:])} for e in emails]
+	return jsonify(success=True, emails = emails)
+
+
+@application.route('/getNotifications',methods=['GET', 'POST'])
 def getNotifications():
-	try:
+	if 'appid' in request.form:
+		long_id = request.form['appid']
+		appid = getModel(models.App, appid = request.form.get('appid')).id
+		print appid
+	elif 'LATrackingID' in request.cookies:
+		long_id = request.cookies.get('LATrackingID')
 		appid = getModel(models.App, appid = request.cookies.get('LATrackingID')).id
-	except:
+	else:
 		return jsonify(**{})
 	_emails = {d.id:d.subject for d in db.session.query(models.Email).filter_by(app_id = appid).all()}
 	_links = {d.id: d.text for d in db.session.query(models.Link).filter_by(app_id = appid).all()}
@@ -474,9 +586,31 @@ def getNotifications():
 		d['country'] = l.country
 		d['minutes_ago'] = int((datetime.utcnow() - l.date).total_seconds()/60)
 		n_l.append(d)
-	return jsonify(links=n_l, emails=n_e, appid=request.cookies.get('LATrackingID'))
+	return jsonify(links=n_l, emails=n_e, appid=long_id)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
+
+
 
 if __name__ == '__main__':
     application.run(debug=True)

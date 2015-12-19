@@ -20,6 +20,9 @@ class User(db.Model):
 	apps_allowed = db.Column(db.Integer, default = 0)
 	nickname = db.Column(db.String(64), index=True, unique=True)
 	first_name = db.Column(db.String(64), index=True, unique=True)
+	google_email = db.Column(db.String(128), index=True, unique=True)
+	google_access_token = db.Column(db.Text(), index=True)
+	google_refresh_token = db.Column(db.Text(), index=True)
 	login_check = db.Column(db.String(64), index=True, unique=True)
 	is_verified = db.Column(db.Boolean, index=False, unique=False)
 	pw_hash = db.Column(db.String(512), index=True, unique=True)
@@ -46,6 +49,8 @@ class Email(db.Model):
 	__tablename__ = "email"
 	id = db.Column(db.Integer, primary_key=True)
 	emailid = db.Column(db.String(64), index=True, unique=True)
+	google_message_id = db.Column(db.String(128), index=True, unique=True)
+	google_thread_id = db.Column(db.String(128), index=True)
 	text = db.Column(db.Text(), index=True)
 	html = db.Column(db.Text(), index=True)
 	to_address = db.Column(db.Text(), index=True)
@@ -54,6 +59,8 @@ class Email(db.Model):
 	bcc_address = db.Column(db.Text(), index=True)
 	subject = db.Column(db.Text(), index=True)
 	opens = relationship('Visit', backref='email')
+	date_sent = db.Column(db.DateTime())
+	links = relationship('Link', backref='email')
 	app_id = db.Column(db.Integer, db.ForeignKey("app.id"), nullable=True)
 
 class Link(db.Model):
@@ -63,7 +70,9 @@ class Link(db.Model):
 	url = db.Column(db.String(1024), index=True)
 	text = db.Column(db.String(1024), index=True)
 	opens = relationship('Visit', backref='link')
+
 	app_id = db.Column(db.Integer, db.ForeignKey("app.id"), nullable=True)
+	email_id = db.Column(db.Integer, db.ForeignKey("email.id"), nullable=True)
 
 
 class Visit(db.Model):
