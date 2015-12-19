@@ -2,6 +2,7 @@
 import googleAPI
 from datetime import timedelta
 from flask import make_response, request, current_app, Flask
+import os
 from flask_mail import Mail, Message
 from flask_apscheduler import APScheduler
 from functools import update_wrapper
@@ -21,7 +22,6 @@ from flask.ext.login import LoginManager, login_user, current_user, logout_user,
 login_manager = LoginManager()
 application = Flask(__name__)
 application.config.from_object('config')
-scheduler = APScheduler()
 
 CORS(application)
 login_manager.init_app(application)
@@ -37,19 +37,8 @@ from datetime import datetime
 from collections import Counter
 
 
-class Config(object):
-	JOBS = [
-		{
-			'id': 'handleUser',
-			'func': '__main__:handleUser',
-			# 'args': (1, 2),
-			'trigger': 'interval',
-			'seconds': 10
-		}
-	]
 
-	SCHEDULER_VIEWS_ENABLED = True
-
+scheduler = APScheduler()
 scheduler.init_app(application)
 scheduler.start()
 
