@@ -490,6 +490,7 @@ def cleanLink(e):
 	d = {}
 	d['url'] = e.url
 	d['text'] = e.text
+	d['linkin'] = e.linkid
 	return d
 
 
