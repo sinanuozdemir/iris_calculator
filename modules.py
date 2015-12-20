@@ -16,5 +16,6 @@ def get_or_create(model, **kwargs):
 		instance = model(**kwargs)
 		db.session.add(instance)
 		db.session.commit()
+		db.session.close()
 		return instance, True
 

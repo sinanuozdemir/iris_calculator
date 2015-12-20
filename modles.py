@@ -12,6 +12,7 @@ def userGoogleAPI(user):
 		print "new token"
 		user.google_access_token = new_token
 		db.session.commit()
+		db.session.close()
 	return user.google_access_token
 
 

@@ -214,6 +214,7 @@ def _redirect(l):
 	p.date = datetime.now()
 	db.session.add(p)
 	db.session.commit()
+	db.session.close()
 	return redirect(red_url, code=302)
 
 @application.route("/e/<path:e>", methods=['GET'])
@@ -242,6 +243,7 @@ def emailOpen(e):
 	p.date = datetime.now()
 	db.session.add(p)
 	db.session.commit()
+	db.session.close()
 	return jsonify(success=True, description='successfully tracked email')
 
 @application.route('/insert', methods=['GET', 'POST'])
@@ -267,6 +269,7 @@ def insert():
 				e.date = datetime.now()
 				db.session.add(e)
 				db.session.commit()
+				db.session.close()
 				return jsonify(**{'status':'success', 'description':'event recorded'})
 			app = modules.getModel(models.App, appid = request.form['appid'])
 			if not app:
@@ -304,6 +307,7 @@ def insert():
 		p.date = datetime.now()
 		db.session.add(p)
 		db.session.commit()
+		db.session.close()
 	except Exception as e:
 		error = repr(e)
 		status = 'failure'
@@ -319,6 +323,7 @@ def verify(v):
 	if u:
 		u.is_verified = True
 		db.session.commit()
+		db.session.close()
 		login_user(u, remember=True, force=True, fresh=False)
 		setItDown()
 	return jsonify(**{})
@@ -342,6 +347,7 @@ def login():
 				u.login_check = login_check_
 				db.session.add(u)
 				db.session.commit()
+				db.session.close()
 				msg = Message("Click me", sender="verifications@latracking.com", recipients=[email])
 				msg.html = '<b><a href="https://latracking.com/v/'+login_check_+'">click me</a></b>'
 				mail.send(msg)
@@ -372,6 +378,7 @@ def test():
 			a = modules.get_or_create(models.App, appid=request.form['delete'])[0]
 			db.session.delete(a)
 			db.session.commit()
+			db.session.close()
 		elif 'site_to_track' in request.form:
 			base = request.form['site_to_track'].replace('https://','').replace('http://','').replace('www.','').replace('/','').lower().strip()
 			w, w_c = modules.get_or_create(models.Website, base=base)
@@ -381,6 +388,7 @@ def test():
 				a = models.App(appid = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(20)), user = current_user, website = w)
 				db.session.add(a)
 				db.session.commit()
+				db.session.close()
 		redirect('/test')
 	apps = db.session.query(models.App).filter_by(user_id = current_user.id).all()
 	return render_template('test.html', apps = apps)
@@ -445,16 +453,11 @@ def convertHTML():
 		print response
 		email = db.session.query(models.Email).filter_by(id=e['email_id']).first()
 		email.google_message_id = response['id']
+		email.from_address = u.google_email
 		email.google_thread_id = response['threadId']
 		email.date_sent = datetime.utcnow()
-		# db.session.query(models.Email).filter(id==e['email_id']).update(
-		# 	{
-		# 	'google_message_id': response['id'],
-		# 	'google_thread_id': response['threadId'],
-		# 	'date_sent': datetime.utcnow()
-		# 	}
-		# )
 		db.session.commit()
+		db.session.close()
 	return jsonify(success=True, links=links, cleaned_html=str(soup), email=e)
 
 
@@ -497,6 +500,16 @@ def cleanLink(e):
 	d['text'] = e.text
 	return d
 
+
+
+def _getStatsOnThread(threadId):
+	messages_in_thread = db.session.query(models.Email).filter(models.Email.google_thread_id==threadId).all()
+	num_messages = len(messages_in_thread)
+	from_addresses = list(set([e.from_address for e in messages_in_thread if e.from_address]))
+	to_addresses = list(set([e.to_address for e in messages_in_thread if e.to_address]))
+	return {'num_messages':num_messages, 'from_addresses':from_addresses, 'to_addresses':to_addresses}
+
+
 @application.route('/getInfoOnEmails',methods=['POST'])
 def getInfoOnEmails():
 	if 'appid' not in request.form or 'emails' not in request.form:
@@ -505,11 +518,10 @@ def getInfoOnEmails():
 	a = db.session.query(models.App).filter_by(appid=request.form['appid']).first().id
 	emails = db.session.query(models.Email).filter(models.Email.emailid.in_(email_ids)).filter_by(app_id=a).all()
 	# ids = [e.google_thread_id for e in emails]
-	# messages = [e.google_thread_id for e in db.session.query(models.Email).filter(models.Email.google_thread_id.in_(ids))]
+	
 	# return [k for k, v in Counter(messages).iteritems() if v == 1 ]
-	emails_ = [{'links':[{'link':cleanLink(l), 'opens':map(cleanVisit,l.opens[-3:])} for l in e.links], 'email':cleanEmail(e), 'opens':map(cleanVisit,e.opens[-3:])} for e in emails]
+	emails_ = [{'stats':_getStatsOnThread(e.google_thread_id), 'links':[{'link':cleanLink(l), 'opens':map(cleanVisit,l.opens[-3:])} for l in e.links], 'email':cleanEmail(e), 'opens':map(cleanVisit,e.opens[-3:])} for e in emails]
 	return jsonify(success=True, emails = emails_)
-
 
 @application.route('/getNotifications',methods=['GET', 'POST'])
 def getNotifications():
