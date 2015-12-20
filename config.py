@@ -9,7 +9,7 @@ JOBS = [
 			'func': 'modles:handleRandomUser',
 			# 'args': (21,),
 			'trigger': 'cron',
-			'second': 10
+			'second': 60
 		}
 ]
 

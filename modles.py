@@ -29,7 +29,9 @@ def getUnrepliedThreadsOfUser(user_id, from_ = 'google'):
 	if from_ == 'google':
 		ids = [e.google_thread_id for e in emails]
 		messages = [e.google_thread_id for e in db.session.query(models.Email).filter(models.Email.google_thread_id.in_(ids))]
-		return random.shuffle([k for k, v in Counter(messages).iteritems() if v == 1])
+		to_return = [k for k, v in Counter(messages).iteritems() if v == 1]
+		random.shuffle(to_return)
+		return to_return
 
 def handleUser(user_id = 21):
 	print "checking user %d" %(user_id)
@@ -38,7 +40,7 @@ def handleUser(user_id = 21):
 	print "%d unread threads" %(len(unread_threads))
 	for threadId in unread_threads:
 		print "looking for replies to thread %s" %(threadId)
-		time.sleep(random.randint(2,7))
+		time.sleep(random.randint(2,20))
 		checkForReplies(threadId, access_token, from_ = 'google')
 	return {'status':'done', 'user_id':user_id}
 
@@ -48,7 +50,7 @@ def handleUsers():
 
 def handleRandomUser():
 	u = random.sample(db.session.query(models.User.id).all(), 1)[0][0]
-	time.sleep(random.randint(4,10))
+	time.sleep(random.randint(4,15))
 	handleUser(u)
 	return True
 

@@ -476,7 +476,8 @@ def cleanVisit(visit):
 	d['country'] = visit.country
 	d['city'] = visit.city
 	d['public_ip'] = visit.public_ip
-	d['minutes_ago'] = int((datetime.utcnow() - visit.date).total_seconds()/60)
+	d['private_ip'] = visit.private_ip
+	d['seconds_ago'] = int((datetime.utcnow() - visit.date).total_seconds())
 	return d
 
 def cleanEmail(e):
