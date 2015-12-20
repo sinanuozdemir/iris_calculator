@@ -214,7 +214,6 @@ def _redirect(l):
 	p.date = datetime.now()
 	db.session.add(p)
 	db.session.commit()
-	db.session.close()
 	return redirect(red_url, code=302)
 
 @application.route("/e/<path:e>", methods=['GET'])
@@ -243,7 +242,6 @@ def emailOpen(e):
 	p.date = datetime.now()
 	db.session.add(p)
 	db.session.commit()
-	db.session.close()
 	return jsonify(success=True, description='successfully tracked email')
 
 @application.route('/insert', methods=['GET', 'POST'])
@@ -269,7 +267,6 @@ def insert():
 				e.date = datetime.now()
 				db.session.add(e)
 				db.session.commit()
-				db.session.close()
 				return jsonify(**{'status':'success', 'description':'event recorded'})
 			app = modules.getModel(models.App, appid = request.form['appid'])
 			if not app:
@@ -307,7 +304,6 @@ def insert():
 		p.date = datetime.now()
 		db.session.add(p)
 		db.session.commit()
-		db.session.close()
 	except Exception as e:
 		error = repr(e)
 		status = 'failure'
@@ -323,7 +319,6 @@ def verify(v):
 	if u:
 		u.is_verified = True
 		db.session.commit()
-		db.session.close()
 		login_user(u, remember=True, force=True, fresh=False)
 		setItDown()
 	return jsonify(**{})
@@ -347,7 +342,6 @@ def login():
 				u.login_check = login_check_
 				db.session.add(u)
 				db.session.commit()
-				db.session.close()
 				msg = Message("Click me", sender="verifications@latracking.com", recipients=[email])
 				msg.html = '<b><a href="https://latracking.com/v/'+login_check_+'">click me</a></b>'
 				mail.send(msg)
@@ -378,7 +372,6 @@ def test():
 			a = modules.get_or_create(models.App, appid=request.form['delete'])[0]
 			db.session.delete(a)
 			db.session.commit()
-			db.session.close()
 		elif 'site_to_track' in request.form:
 			base = request.form['site_to_track'].replace('https://','').replace('http://','').replace('www.','').replace('/','').lower().strip()
 			w, w_c = modules.get_or_create(models.Website, base=base)
@@ -388,7 +381,6 @@ def test():
 				a = models.App(appid = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(20)), user = current_user, website = w)
 				db.session.add(a)
 				db.session.commit()
-				db.session.close()
 		redirect('/test')
 	apps = db.session.query(models.App).filter_by(user_id = current_user.id).all()
 	return render_template('test.html', apps = apps)
@@ -457,7 +449,6 @@ def convertHTML():
 		email.google_thread_id = response['threadId']
 		email.date_sent = datetime.utcnow()
 		db.session.commit()
-		db.session.close()
 	return jsonify(success=True, links=links, cleaned_html=str(soup), email=e)
 
 
