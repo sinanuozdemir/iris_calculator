@@ -38,9 +38,9 @@ from datetime import datetime
 from collections import Counter
 
 
-scheduler = APScheduler()
-scheduler.init_app(application)
-scheduler.start()
+# scheduler = APScheduler()
+# scheduler.init_app(application)
+# scheduler.start()
 
 website_re = re.compile("(https?://)?(www.)?([^\.]+)([\.\w]+)/?((\w+/?)*(\?[\w=]+)?)", re.IGNORECASE)
 
@@ -357,7 +357,7 @@ def login():
 
 @application.route('/check',methods=['GET'])
 def check():
-	modles.handleRandomUser()
+	modles.handleRandomApp()
 	
 	
 	
@@ -422,8 +422,8 @@ def convertHTML():
 	if 'appid' not in request.form:
 		return jsonify(success=False, reason='need tracking_id')
 	appid = request.form['appid']
-	u = modules.getModel(models.App, appid = request.form.get('appid')).user
-	if not u.is_verified:
+	app = modules.getModel(models.App, appid = request.form.get('appid'))
+	if not app.user.is_verified:
 		return jsonify(success=False, reason='not verified')
 	html = request.form['html']
 	links = []
@@ -440,12 +440,12 @@ def convertHTML():
 	new_tag = soup.new_tag("img", src=e['tracking_link'], style="height: 1px; width:1px; display: none !important;")
 	soup.append(new_tag)
 	if 'send' in request.form and 'to_address' in request.form:
-		access_token = modles.userGoogleAPI(u)
-		response = googleAPI.sendEmail(email = u.google_email, access_token = access_token, to_address = d['to_address'], subject = d.get('subject', ''), bcc_address = d.get('bcc_address', ''), html = str(soup))
+		access_token = modles.appGoogleAPI(app)
+		response = googleAPI.sendEmail(email = app.google_email, access_token = access_token, to_address = d['to_address'], subject = d.get('subject', ''), bcc_address = d.get('bcc_address', ''), html = str(soup))
 		print response
 		email = db.session.query(models.Email).filter_by(id=e['email_id']).first()
 		email.google_message_id = response['id']
-		email.from_address = u.google_email
+		email.from_address = app.google_email
 		email.google_thread_id = response['threadId']
 		email.date_sent = datetime.utcnow()
 		db.session.commit()
@@ -498,8 +498,9 @@ def _getStatsOnThread(threadId):
 	messages_in_thread = db.session.query(models.Email).filter(models.Email.google_thread_id==threadId).all()
 	num_messages = len(messages_in_thread)
 	from_addresses = list(set([e.from_address for e in messages_in_thread if e.from_address]))
+	has_bounce = sum([e.bounce for e in messages_in_thread if e.from_address]) > 0
 	to_addresses = list(set([e.to_address for e in messages_in_thread if e.to_address]))
-	return {'num_messages':num_messages, 'from_addresses':from_addresses, 'to_addresses':to_addresses}
+	return {'has_bounce':has_bounce, 'num_messages':num_messages, 'from_addresses':from_addresses, 'to_addresses':to_addresses}
 
 
 @application.route('/getInfoOnEmails',methods=['POST'])
@@ -509,9 +510,6 @@ def getInfoOnEmails():
 	email_ids = [a.strip() for a in request.form['emails'].split(',')]
 	a = db.session.query(models.App).filter_by(appid=request.form['appid']).first().id
 	emails = db.session.query(models.Email).filter(models.Email.emailid.in_(email_ids)).filter_by(app_id=a).all()
-	# ids = [e.google_thread_id for e in emails]
-	
-	# return [k for k, v in Counter(messages).iteritems() if v == 1 ]
 	emails_ = [{'stats':_getStatsOnThread(e.google_thread_id), 'links':[{'link':cleanLink(l), 'opens':map(cleanVisit,l.opens[-3:])} for l in e.links], 'email':cleanEmail(e), 'opens':map(cleanVisit,e.opens[-3:])} for e in emails]
 	return jsonify(success=True, emails = emails_)
 

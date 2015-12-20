@@ -29,6 +29,13 @@ def goodGoogleAuth(token):
 	except:
 		return False
 
+def detectBouncedEmailFromMessage(message):
+	SIMPLE_EMAIL_REGEX = '(([a-zA-Z0-9][\w\.-]+)@([a-z-_A-Z0-9\.]+)\.(\w\w\w?))'
+	snippet = message['snippet']
+	if 'delivery' in snippet.lower() and 'failed' in snippet.lower():
+		return re.search(SIMPLE_EMAIL_REGEX, snippet).group(1)
+	return None
+
 def getGoogleAccessToken(refresh_token):
 	r = requests.post('https://www.googleapis.com/oauth2/v3/token', data = {
 	'client_secret': 'VQ2sIQGhXH-ue6olCgUY9L3g',
@@ -44,7 +51,10 @@ def getGoogleAccessToken(refresh_token):
 		return None
 
 def getEmailFromText(t):
-	return re.search(SIMPLE_EMAIL_REGEX, t).group(1)
+	try:
+		return re.search(SIMPLE_EMAIL_REGEX, t).group(1)
+	except:
+		return None
 
 def cleanMessage(m):
 	new_m = {}
@@ -66,6 +76,7 @@ def cleanMessage(m):
 		elif p['name'] in ['Bcc']:
 			new_m['bcc_address'] = getEmailFromText(p['value'])
 	new_m['emailid'] = 'ee'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(62))
+	new_m['bounce'] = detectBouncedEmailFromMessage(m) is not None
 	return {k:v for k, v in new_m.iteritems() if v}
 
 def getThreadMessages(threadId, access_token):
