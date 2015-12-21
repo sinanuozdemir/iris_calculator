@@ -38,7 +38,7 @@ def handleApp(app_id = 21):
 	print "%d unread threads" %(len(unread_threads))
 	for threadId in unread_threads:
 		print "looking for replies to thread %s" %(threadId)
-		time.sleep(random.randint(2,20))
+		time.sleep(random.randint(2,5))
 		checkForReplies(threadId, access_token, from_ = 'google')
 	return {'status':'done', 'app_id':app_id}
 

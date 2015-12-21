@@ -1,4 +1,5 @@
 import re
+from bs4 import BeautifulSoup as bs
 import dateutil.parser
 import json
 import string
@@ -8,6 +9,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import requests
 import cgi
+
 
 
 ########################################
@@ -44,7 +46,6 @@ def getGoogleAccessToken(refresh_token):
 	'grant_type': 'refresh_token'
 	})
 	response = r.json()
-	# print response
 	try:
 		return response['access_token']
 	except:
@@ -56,11 +57,25 @@ def getEmailFromText(t):
 	except:
 		return None
 
+
+def MakeshiftSentiment(text):
+	text = text.lower().strip()
+	negs = {'no':-3, 'no thank you':-1, 'remove me':-5, 'unsubscribe':-5}
+	pos = {'sure':1, 'yes':1, 'love to':2, 'set up a':1, 'why not':1}
+	score = 0
+	for k, v in sorted(negs.items(), key=lambda x:-len(x)):
+		score += v*text.count(k)
+		text = re.sub(k, '', text)
+	for k, v in sorted(pos.items(), key=lambda x:-len(x)):
+		score += v*text.count(k)
+		text = re.sub(k, '', text)
+	return score
+
+
 def cleanMessage(m):
 	new_m = {}
 	new_m['google_message_id'] = m.get('id')
 	new_m['google_thread_id'] = m.get('threadId')
-	new_m['text'] = m.get('snippet')
 	payload = m['payload']['headers']
 	for p in payload:
 		if p['name'] in ['to', 'Delivered-To', "To"]:
@@ -75,9 +90,20 @@ def cleanMessage(m):
 			new_m['cc_address'] = getEmailFromText(p['value'])
 		elif p['name'] in ['Bcc']:
 			new_m['bcc_address'] = getEmailFromText(p['value'])
+	payload = m['payload'].get('parts', [])
+	for p in payload:
+		if 'text/plain' in p['mimeType']:
+			new_m['text'] = base64.urlsafe_b64decode(str(p['body']['data'])).split('\r\n\r\nOn')[0]
+		elif 'html' in p['mimeType']:
+			new_m['html'] = base64.urlsafe_b64decode(str(p['body']['data']))
+	if new_m.get('html') and not new_m.get('text'):
+		new_m['text'] = bs(new_m['html']).find('div', {'dir':'ltr'}).text
+	if new_m.get('text'):
+		new_m['makeshift_sentiment'] = MakeshiftSentiment(new_m.get('text'))
 	new_m['emailid'] = 'ee'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(62))
 	new_m['bounce'] = detectBouncedEmailFromMessage(m) is not None
-	return {k:v for k, v in new_m.iteritems() if v}
+	new_m['bounced_email'] = detectBouncedEmailFromMessage(m)
+	return {k:v for k, v in new_m.iteritems() if v is not None and v != '' and v != []}
 
 def getThreadMessages(threadId, access_token):
 	url = 'https://www.googleapis.com/gmail/v1/users/me/threads/'+threadId
@@ -86,27 +112,33 @@ def getThreadMessages(threadId, access_token):
 	messages = requests.get(url, headers = headers).json()['messages']
 	return messages
 
+def getMessage(messageId, access_token, att):
+	url = 'https://www.googleapis.com/gmail/v1/users/me/messages/'+messageId
+	headers = {}
+	headers['authorization'] = 'Bearer ' + access_token
+	message = requests.get(url, headers = headers).json()
+
+	return message
 
 def refreshAccessToken(access, refresh):
 	if not goodGoogleAuth(access):
 		access = getGoogleAccessToken(refresh)
 	return access
 
-def sendEmail(email, access_token, to_address, body = '', subject = '', bcc_address = None, html = None):
+def sendEmail(email, access_token, to_address, text = '', subject = '', bcc_address = None, html = ''):
 	url = 'https://www.googleapis.com/gmail/v1/users/me/messages/send'
 	headers = {}
 	headers['content-type'] = 'application/json'
 	headers['authorization'] = 'Bearer ' + access_token
 	headers['content-length'] = 101
-	unique = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(70))
-	body = cgi.escape(body, True)
-	body = body.replace("\n","<br />")
+	text = cgi.escape(text, True)
+	text = text.replace("\n","<br />")
 	message = MIMEMultipart('alternative')
 	message['to'] = to_address
 	message['from'] = email
 	if bcc_address: message['bcc'] = bcc_address
 	message['subject'] = subject
-	part1 = MIMEText(body, 'plain')
+	part1 = MIMEText(text, 'plain')
 	part2 = MIMEText(html, 'html')
 	message.attach(part1)
 	message.attach(part2)

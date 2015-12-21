@@ -6,7 +6,7 @@ SQLALCHEMY_MIGRATE_REPO = os.path.join(basedir, 'db_repository')
 JOBS = [
 		{
 			'id': 'handleUsers',
-			'func': 'modles:handleRandomUser',
+			'func': 'modles:handleRandomApp',
 			# 'args': (21,),
 			'trigger': 'cron',
 			'second': 60
