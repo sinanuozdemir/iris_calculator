@@ -367,7 +367,7 @@ def makeNewUser():
 	return jsonify(success=True, appid=a)
 
 def getAppIDForEmail(email, app_dict = {}):
-	u, t = modules.get_or_create(models.User, email=email)
+	u, t = modules.get_or_create(models.User, email=email, defaults={'is_verified':True})
 	apps = db.session.query(models.App).filter_by(user = u).all()
 	if len(apps):
 		return apps[0].appid
