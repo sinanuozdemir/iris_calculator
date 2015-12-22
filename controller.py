@@ -435,9 +435,9 @@ def _makeDBEmail(form_dict):
 		return {'success':True, 'email_id':e.id, 'tracking_link':'https://www.latracking.com/e/'+random_email}
 	return {'success':False}
 
-@application.route('/convertHTML',methods=['POST', 'OPTIONS'])
+@application.route('/sendEmail',methods=['POST', 'OPTIONS'])
 @crossdomain(origin='*')
-def convertHTML():
+def sendEmail():
 	if 'appid' not in request.form: return jsonify(success=False, reason='need tracking_id')
 	appid = request.form['appid']
 	app = modules.getModel(models.App, appid = request.form.get('appid'))
@@ -459,16 +459,15 @@ def convertHTML():
 		new_tag = soup.new_tag("img", src=e['tracking_link'], style="height: 1px; width:1px; display: none !important;")
 		soup.append(new_tag)
 		html = str(soup)
-	if 'send' in request.form and 'to_address' in request.form:
-		access_token = modles.appGoogleAPI(app)
-		response = googleAPI.sendEmail(email = app.google_email, access_token = access_token, to_address = d['to_address'], subject = d.get('subject', ''), bcc_address = d.get('bcc_address', ''), html = html, text = request.form.get('text', ''))
-		print response
-		email = db.session.query(models.Email).filter_by(id=e['email_id']).first()
-		email.google_message_id = response['id']
-		email.from_address = app.google_email
-		email.google_thread_id = response['threadId']
-		email.date_sent = datetime.utcnow()
-		db.session.commit()
+	access_token = modles.appGoogleAPI(app)
+	response = googleAPI.sendEmail(email = app.google_email, access_token = access_token, to_address = d['to_address'], subject = d.get('subject', ''), bcc_address = d.get('bcc_address', ''), html = html, text = request.form.get('text', ''))
+	print response
+	email = db.session.query(models.Email).filter_by(id=e['email_id']).first()
+	email.google_message_id = response['id']
+	email.from_address = app.google_email
+	email.google_thread_id = response['threadId']
+	email.date_sent = datetime.utcnow()
+	db.session.commit()
 	return jsonify(success=True, links=links, cleaned_html=str(soup), email=e)
 
 
