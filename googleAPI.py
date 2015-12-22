@@ -97,7 +97,7 @@ def cleanMessage(m):
 		elif 'html' in p['mimeType']:
 			new_m['html'] = base64.urlsafe_b64decode(str(p['body']['data']))
 	if new_m.get('html') and not new_m.get('text'):
-		new_m['text'] = bs(new_m['html']).find('div', {'dir':'ltr'}).text
+		new_m['text'] = bs(new_m['html']).text
 	if new_m.get('text'):
 		new_m['makeshift_sentiment'] = MakeshiftSentiment(new_m.get('text'))
 	new_m['emailid'] = 'ee'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(62))

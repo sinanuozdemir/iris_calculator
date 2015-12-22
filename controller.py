@@ -249,10 +249,9 @@ def get_my_ip():
 	if fwd is None:
 		fwd = request.environ.get('REMOTE_ADDR')
 	ip = fwd.split(',')[0]
-	if request.args.get('format') == 'json':
-		return jsonify(**{'ip': ip})
-	else:
-		return ip
+	g = geocoder.ip(ip)
+	tz = g.timezone
+	return jsonify(**{'ip': ip, 'tz':tz, 'city':g.city, 'country':g.country, 'state':g.state})
 
 @application.route("/logout")
 @login_required
@@ -513,7 +512,7 @@ def cleanLink(e):
 	d = {}
 	d['url'] = e.url
 	d['text'] = e.text
-	d['linkin'] = e.linkid
+	d['linkis'] = e.linkid
 	d['last_few_opens'] = map(cleanVisit,e.opens[-3:])
 	return d
 
@@ -597,7 +596,7 @@ def check():
 	# print MakeshiftSentiment('NO THANK YOUUUU')
 	# m =googleAPI.getMessage('151c5bf69ed23376', 'ya29.UQJIdARbW_62BItOeqwPNdZZiEfLIZlwONz6-aTjmhLDuL1ZE2NJTB0h05XlzNY7ZAUyLBM', 'Tk8gVEhBTksgWU9VVVVVVVUNCg0KT24gTW9uLCBEZWMgMjEsIDIwMTUgYXQgMTA6MTIgQU0sIDxzaW5hbi51Lm96ZGVtaXJAZ21haWwuY29tPiB3cm90ZToNCg0KPiB0ZXN0DQo-IDxodHRwczovL2xhdHJhY2tpbmcuY29tL3IvbGxBVUo2TUpUSEgxVDk3OFVZTDZaM0tONldRUjVLVVRUWkRWUjFINjhFV1FPNUU0Mk5OVlVBU1FITjlITUVXVj4NCj4NCj4gLS0NCj4gU2luYW4gT3pkZW1pcg0KPiBGb3VuZGVyICsgQ1RPICsgQ2hpZWYgRGF0YSBOZXJkDQo-IExlZ2lvbiBBbmFseXRpY3MNCj4gPGh0dHBzOi8vbGF0cmFja2luZy5jb20vci9sbFpVMU5ZMldSMDdSTTFMTzhDT0dOSUZSNkhXVE1HV0FXNjNRMDBXOTlIOTJPUENZR1U3S1EzMlYyV1hFTFowPg0KPg0KDQoNCg0KLS0gDQpTaW5hbiBPemRlbWlyDQpGb3VuZGVyICsgQ1RPICsgQ2hpZWYgRGF0YSBOZXJkDQpMZWdpb24gQW5hbHl0aWNzIDxodHRwczovL3d3dy5sZWdpb25hbmFseXRpY3MuY29tPg0K')
 	# print googleAPI.cleanMessage(m)
-	modles.handleRandomApp()
+	modles.handleApp(42)
 	
 
 
