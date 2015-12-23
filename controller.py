@@ -245,10 +245,13 @@ def load_user(user_id): return getUser(id = user_id)
 
 @application.route("/get_my_ip", methods=["GET"])
 def get_my_ip():
-	fwd = request.environ.get('HTTP_X_FORWARDED_FOR', None)
-	if fwd is None:
-		fwd = request.environ.get('REMOTE_ADDR')
-	ip = fwd.split(',')[0]
+	if request.args.get('ip'):
+		ip = request.args['ip']
+	else:
+		fwd = request.environ.get('HTTP_X_FORWARDED_FOR', None)
+		if fwd is None:
+			fwd = request.environ.get('REMOTE_ADDR')
+		ip = fwd.split(',')[0]
 	g = geocoder.ip(ip)
 	tz = g.timezone
 	return jsonify(**{'ip': ip, 'tz':tz, 'city':g.city, 'country':g.country, 'state':g.state})
