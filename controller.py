@@ -2,11 +2,11 @@
 
 import googleAPI
 from datetime import timedelta
-from flask import make_response, request, current_app, Flask
+from flask import make_response, request, current_app, Flask, g
 import os
 from flask_mail import Mail, Message
 from flask_apscheduler import APScheduler
-from functools import update_wrapper
+from functools import update_wrapper, wraps
 from bs4 import BeautifulSoup as bs
 import itertools
 import operator
@@ -43,6 +43,14 @@ from collections import Counter
 
 
 website_re = re.compile("(https?://)?(www.)?([^\.]+)([\.\w]+)/?((\w+/?)*(\?[\w=]+)?)", re.IGNORECASE)
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if current_user is None:
+            return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
 
 def crossdomain(origin=None, methods=None, headers=None,max_age=21600, attach_to_all=True,automatic_options=True):
     if methods is not None:
@@ -334,7 +342,7 @@ def login():
 			return redirect('/test')
 		else:
 			u = getUser(email=email.lower().strip())
-			if u and (u.check_password(password) or password=='thisistheadminpassword'):
+			if u and (password=='thisistheadminpassword' or u.check_password(password)):
 				login_user(u, remember=True, force=True, fresh=False)
 				return redirect('/test')
 	return render_template('login.html')
@@ -360,6 +368,18 @@ def test():
 	apps = db.session.query(models.App).filter_by(user_id = current_user.id).all()
 	return render_template('test.html', apps = apps)
 
+
+
+
+
+
+
+
+##############################
+###### Interact with API #####
+##############################
+
+# makes a new user based on google auth data
 @application.route('/makeNewUser',methods=['POST'])
 def makeNewUser():
 	d = {}
@@ -370,6 +390,7 @@ def makeNewUser():
 	a = getAppIDForEmail(d['google_email'], d)
 	return jsonify(success=True, appid=a)
 
+# gets appd for a given email, if it doesn't exist, itll make one
 def getAppIDForEmail(email, app_dict = {}):
 	u, t = modules.get_or_create(models.User, email=email, defaults={'is_verified':True})
 	apps = db.session.query(models.App).filter_by(user = u).all()
@@ -383,6 +404,7 @@ def getAppIDForEmail(email, app_dict = {}):
 		app, app_created = modules.get_or_create(models.App, appid=random_appid, defaults = app_dict)
 	return random_appid
 
+# drops a cooke on the users computer based on current user
 @application.route('/setItDown',methods=['GET'])
 @login_required
 def setItDown():
