@@ -254,7 +254,8 @@ def get_my_ip():
 		ip = fwd.split(',')[0]
 	g = geocoder.ip(ip)
 	tz = g.timezone
-	return jsonify(**{'ip': ip, 'tz':tz, 'city':g.city, 'country':g.country, 'state':g.state})
+	offset = int(pytz.timezone(tz).localize(datetime.now()).strftime('%z'))/100
+	return jsonify(**{'ip': ip, 'offset':offset, 'tz':tz, 'city':g.city, 'country':g.country, 'state':g.state})
 
 @application.route("/logout")
 @login_required
