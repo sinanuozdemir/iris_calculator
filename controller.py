@@ -647,10 +647,12 @@ application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jfjhbsdfjhvbskcgvbdf39457
 DEBUG = False
 
 if __name__ == '__main__':
-	scheduler = Scheduler(5, modles.handleRandomApp)
-	scheduler.start()
+	if not DEBUG:
+		scheduler = Scheduler(5, modles.handleRandomApp)
+		scheduler.start()
 	application.run(debug=True, port = 5000, use_reloader=DEBUG) #turn off reloader then deploying
-	scheduler.stop()
+	if not DEBUG:
+		scheduler.stop()
 
 
 
