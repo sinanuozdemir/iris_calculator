@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta	
 import time
 import random
 from collections import Counter
@@ -14,41 +15,33 @@ def appGoogleAPI(app):
 		db.session.commit()
 	return app.google_access_token
 
-
-
-def checkForReplies(threadId, access_token, from_ = 'google'):
+def checkForReplies(thread, access_token, from_ = 'google'):
 	if from_ == 'google':
-		for message in googleAPI.getThreadMessages(threadId, access_token):
+		for message in googleAPI.getThreadMessages(thread.unique_thread_id, access_token):
 			g = googleAPI.cleanMessage(message)
+			g['thread_id'] = thread.id
 			modules.get_or_create(models.Email, google_message_id=g['google_message_id'], defaults = g)
 
-def getUnrepliedThreadsOfApp(app_id, from_ = 'google'):
-	emails = db.session.query(models.Email).filter_by(app_id=app_id).all()
-	if from_ == 'google':
-		ids = [e.google_thread_id for e in emails]
-		messages = [e.google_thread_id for e in db.session.query(models.Email).filter(models.Email.google_thread_id.in_(ids))]
-		to_return = [k for k, v in Counter(messages).iteritems() if v == 1]
-		random.shuffle(to_return)
-		return to_return
+def getThreadsOfApp(app, from_ = 'google'):
+	threads = app.threads
+	ids = [(t, len(t.emails)) for t in threads if t.origin == from_ and t.first_made > (datetime.now()-timedelta(days=60)) and (t.last_checked is None or t.last_checked <(datetime.now() - timedelta(hours=1)))]
+	return ids
 
-def handleApp(app_id = 21):
-	print "checking app %d" %(app_id)
-	access_token = appGoogleAPI(db.session.query(models.App).filter_by(id=app_id).first())
-	unread_threads = getUnrepliedThreadsOfApp(app_id)
-	print "%d unread threads" %(len(unread_threads))
-	for threadId in unread_threads:
-		print "looking for replies to thread %s" %(threadId)
-		time.sleep(random.randint(2,5))
-		checkForReplies(threadId, access_token, from_ = 'google')
-	return {'status':'done', 'app_id':app_id}
-
-def handleApps():
-	for u in db.session.query(models.App.id).all():
-		print handleApp(u[0])
+def handleApp(appid = None):
+	if not appid: return False
+	print "checking app %s" %(appid)
+	a = db.session.query(models.App).filter_by(appid=appid).first()
+	access_token = appGoogleAPI(a)
+	threads = getThreadsOfApp(a)
+	for thread in threads:
+		print "looking for replies to thread %s which currently has %d messages in it" % thread
+		checkForReplies(thread[0], access_token, from_ = 'google')
+		thread[0].last_checked = datetime.now()
+		db.session.commit()
+	return {'status':'done', 'appid':appid}
 
 def handleRandomApp():
-	u = random.sample(db.session.query(models.App.id).all(), 1)[0][0]
-	time.sleep(random.randint(4,15))
+	u = random.sample(db.session.query(models.App.appid).all(), 1)[0][0]
 	handleApp(u)
 	return True
 

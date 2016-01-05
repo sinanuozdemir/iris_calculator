@@ -125,6 +125,8 @@ def refreshAccessToken(access, refresh):
 		access = getGoogleAccessToken(refresh)
 	return access
 
+
+#ADDDDD send as part of a thread
 def sendEmail(email, access_token, to_address, text = '', subject = '', bcc_address = None, html = ''):
 	url = 'https://www.googleapis.com/gmail/v1/users/me/messages/send'
 	headers = {}
@@ -148,3 +150,5 @@ def sendEmail(email, access_token, to_address, text = '', subject = '', bcc_addr
 		return r.json()
 	except Exception as e:
 		return {'error':str(e)}
+
+

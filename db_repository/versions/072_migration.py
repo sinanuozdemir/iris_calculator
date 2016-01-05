@@ -23,6 +23,7 @@ email = Table('email', post_meta,
     Column('subject', Text),
     Column('date_sent', DateTime),
     Column('app_id', Integer),
+    Column('thread_id', Integer),
 )
 
 
@@ -31,11 +32,15 @@ def upgrade(migrate_engine):
     # migrate_engine to your metadata
     pre_meta.bind = migrate_engine
     post_meta.bind = migrate_engine
-    post_meta.tables['email'].columns['bounced_email'].create()
+    post_meta.tables['email'].columns['makeshift_sentiment'].create()
+    post_meta.tables['email'].columns['textblob_sentiment'].create()
+    post_meta.tables['email'].columns['thread_id'].create()
 
 
 def downgrade(migrate_engine):
     # Operations to reverse the above upgrade go here.
     pre_meta.bind = migrate_engine
     post_meta.bind = migrate_engine
-    post_meta.tables['email'].columns['bounced_email'].drop()
+    post_meta.tables['email'].columns['makeshift_sentiment'].drop()
+    post_meta.tables['email'].columns['textblob_sentiment'].drop()
+    post_meta.tables['email'].columns['thread_id'].drop()

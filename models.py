@@ -1,6 +1,7 @@
 from sqlalchemy.orm import relationship, sessionmaker, backref
 from controller import db
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
 
 class App(db.Model):
 	__tablename__ = "app"
@@ -14,6 +15,7 @@ class App(db.Model):
 	user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 	user = relationship("User", uselist=False, backref="app")
 	emails = relationship('Email', backref='app')
+	threads = relationship('Thread', backref='app')
 	def __repr__(self):
 		return '<App %r>' % (self.appid)
 
@@ -48,6 +50,17 @@ class Website(db.Model):
 	base = db.Column(db.String(1024), index=True, unique=True)
 	visits = relationship('Visit', backref='visit')
 
+class Thread(db.Model):
+	__tablename__ = "thread"
+	id = db.Column(db.Integer, primary_key=True)
+	emails = relationship('Email', backref='thread')
+	origin = db.Column(db.String(128), index=True)
+	unique_thread_id = db.Column(db.String(128), index=True)
+	last_checked = db.Column(db.DateTime())
+	first_made = db.Column(db.DateTime())
+	app_id = db.Column(db.Integer, db.ForeignKey("app.id"), nullable=True)
+	
+
 class Email(db.Model):
 	__tablename__ = "email"
 	id = db.Column(db.Integer, primary_key=True)
@@ -69,6 +82,7 @@ class Email(db.Model):
 	date_sent = db.Column(db.DateTime())
 	links = relationship('Link', backref='email')
 	app_id = db.Column(db.Integer, db.ForeignKey("app.id"), nullable=True)
+	thread_id = db.Column(db.Integer, db.ForeignKey("thread.id"), nullable=True)
 
 class Link(db.Model):
 	__tablename__ = "link"

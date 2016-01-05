@@ -1,16 +1,14 @@
 # coding: utf-8
 
 import googleAPI
+from threading import Timer
 from datetime import timedelta
 from flask import make_response, request, current_app, Flask, g
 import os
 from flask_mail import Mail, Message
-from flask_apscheduler import APScheduler
 from functools import update_wrapper, wraps
 from bs4 import BeautifulSoup as bs
 import itertools
-import operator
-import pytz
 from pytz import timezone
 import string, random
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -37,9 +35,6 @@ import json
 from datetime import datetime
 from collections import Counter
 
-# scheduler = APScheduler()
-# scheduler.init_app(application)
-# scheduler.start()
 
 
 website_re = re.compile("(https?://)?(www.)?([^\.]+)([\.\w]+)/?((\w+/?)*(\?[\w=]+)?)", re.IGNORECASE)
@@ -262,7 +257,7 @@ def get_my_ip():
 		ip = fwd.split(',')[0]
 	g = geocoder.ip(ip)
 	tz = g.timezone
-	offset = int(pytz.timezone(tz).localize(datetime.now()).strftime('%z'))/100
+	offset = int(timezone(tz).localize(datetime.now()).strftime('%z'))/100
 	return jsonify(**{'ip': ip, 'offset':offset, 'tz':tz, 'city':g.city, 'country':g.country, 'state':g.state})
 
 @application.route("/logout")
@@ -488,17 +483,16 @@ def sendEmail():
 	access_token = modles.appGoogleAPI(app)
 	response = googleAPI.sendEmail(email = app.google_email, access_token = access_token, to_address = d['to_address'], subject = d.get('subject', ''), bcc_address = d.get('bcc_address', ''), html = html, text = request.form.get('text', ''))
 	print response
+
 	email = db.session.query(models.Email).filter_by(id=e['email_id']).first()
 	email.google_message_id = response['id']
 	email.from_address = app.google_email
+	thread, thread_created = modules.get_or_create(models.Thread, unique_thread_id = response['threadId'], origin='google', app_id = app.id, defaults = {'first_made':datetime.now()})
 	email.google_thread_id = response['threadId']
+	email.thread_id = thread.id
 	email.date_sent = datetime.utcnow()
 	db.session.commit()
 	return jsonify(success=True, links=links, cleaned_html=str(soup), email=e)
-
-
-
-
 
 
 
@@ -610,6 +604,9 @@ def getNotifications():
 	return jsonify(links=n_l, emails=n_e, appid=long_id)
 
 
+@application.route('/handleApp',methods=['GET'])
+def handleApp():
+	modles.handleApp(request.args.get('appid'))
 
 
 
@@ -620,27 +617,41 @@ def getNotifications():
 
 @application.route('/check',methods=['GET'])
 def check():
-	# print MakeshiftSentiment('NO THANK YOUUUU')
-	# m =googleAPI.getMessage('151c5bf69ed23376', 'ya29.UQJIdARbW_62BItOeqwPNdZZiEfLIZlwONz6-aTjmhLDuL1ZE2NJTB0h05XlzNY7ZAUyLBM', 'Tk8gVEhBTksgWU9VVVVVVVUNCg0KT24gTW9uLCBEZWMgMjEsIDIwMTUgYXQgMTA6MTIgQU0sIDxzaW5hbi51Lm96ZGVtaXJAZ21haWwuY29tPiB3cm90ZToNCg0KPiB0ZXN0DQo-IDxodHRwczovL2xhdHJhY2tpbmcuY29tL3IvbGxBVUo2TUpUSEgxVDk3OFVZTDZaM0tONldRUjVLVVRUWkRWUjFINjhFV1FPNUU0Mk5OVlVBU1FITjlITUVXVj4NCj4NCj4gLS0NCj4gU2luYW4gT3pkZW1pcg0KPiBGb3VuZGVyICsgQ1RPICsgQ2hpZWYgRGF0YSBOZXJkDQo-IExlZ2lvbiBBbmFseXRpY3MNCj4gPGh0dHBzOi8vbGF0cmFja2luZy5jb20vci9sbFpVMU5ZMldSMDdSTTFMTzhDT0dOSUZSNkhXVE1HV0FXNjNRMDBXOTlIOTJPUENZR1U3S1EzMlYyV1hFTFowPg0KPg0KDQoNCg0KLS0gDQpTaW5hbiBPemRlbWlyDQpGb3VuZGVyICsgQ1RPICsgQ2hpZWYgRGF0YSBOZXJkDQpMZWdpb24gQW5hbHl0aWNzIDxodHRwczovL3d3dy5sZWdpb25hbmFseXRpY3MuY29tPg0K')
-	# print googleAPI.cleanMessage(m)
-	modles.handleApp(42)
+	modles.handleRandomApp()
+	return None
 	
 
-
-
-
-
-
-
-
+class Scheduler(object):
+	def __init__(self, sleep_time, function):
+		self.sleep_time = sleep_time
+		self.function = function
+		self._t = None
+	def start(self):
+		if self._t is None:
+			self._t = Timer(self.sleep_time, self._run)
+			self._t.start()
+		else:
+			raise Exception("this timer is already running")
+	def _run(self):
+		self.function()
+		self._t = Timer(self.sleep_time, self._run)
+		self._t.start()
+	def stop(self):
+		if self._t is not None:
+			self._t.cancel()
+			self._t = None
 
 
 application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
 
-
+DEBUG = False
 
 if __name__ == '__main__':
-	application.run(debug=True)
+	scheduler = Scheduler(5, modles.handleRandomApp)
+	scheduler.start()
+	application.run(debug=True, port = 5000, use_reloader=DEBUG) #turn off reloader then deploying
+	scheduler.stop()
+
 
 
 
