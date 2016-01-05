@@ -41,6 +41,7 @@ def handleApp(appid = None):
 	return {'status':'done', 'appid':appid}
 
 def handleRandomApp():
+	print "attempting to handle a random app"
 	u = random.sample(db.session.query(models.App.appid).all(), 1)[0][0]
 	handleApp(u)
 	return True

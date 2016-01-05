@@ -16,5 +16,4 @@ pytz==2014.4
 beautifulsoup4==4.3.2
 Flask-Mail==0.9.1
 python-dateutil==2.4.2
-Flask-APScheduler==1.3.3
 textblob==0.8.4

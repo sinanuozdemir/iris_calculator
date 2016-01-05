@@ -650,7 +650,7 @@ if __name__ == '__main__':
 	if not DEBUG:
 		scheduler = Scheduler(5, modles.handleRandomApp)
 		scheduler.start()
-	application.run(debug=True, port = 5000, use_reloader=DEBUG) #turn off reloader then deploying
+	application.run(debug=DEBUG, port = 5000, use_reloader=DEBUG)
 	if not DEBUG:
 		scheduler.stop()
 
