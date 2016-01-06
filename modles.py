@@ -35,6 +35,8 @@ def handleApp(appid = None):
 	threads = getThreadsOfApp(a)
 	for thread in threads:
 		print "looking for replies to thread %s which currently has %d messages in it" % thread
+		thread[0].last_checked = datetime.now()
+		db.session.commit()
 		checkForReplies(thread[0], access_token, from_ = 'google')
 		thread[0].last_checked = datetime.now()
 		tos, froms = [], []
