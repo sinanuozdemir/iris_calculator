@@ -628,6 +628,7 @@ class Scheduler(object):
 		self.sleep_time = sleep_time
 		self.function = function
 		self._t = None
+		self.name = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5))
 	def start(self):
 		if self._t is None:
 			print "Starting the timer"
@@ -638,6 +639,7 @@ class Scheduler(object):
 			raise Exception("this timer is already running")
 	def _run(self):
 		self.function()
+		print self.name, "run"
 		self._t = Timer(self.sleep_time, self._run)
 		self._t.start()
 	def stop(self):
