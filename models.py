@@ -56,6 +56,8 @@ class Thread(db.Model):
 	emails = relationship('Email', backref='thread')
 	origin = db.Column(db.String(128), index=True)
 	unique_thread_id = db.Column(db.String(128), index=True)
+	all_parties_replied = db.Column(db.Boolean, index=False, default=False)
+	people_in_conversation = db.Column(db.Integer, default = 0)
 	last_checked = db.Column(db.DateTime())
 	first_made = db.Column(db.DateTime())
 	app_id = db.Column(db.Integer, db.ForeignKey("app.id"), nullable=True)
@@ -81,6 +83,8 @@ class Email(db.Model):
 	opens = relationship('Visit', backref='email')
 	date_sent = db.Column(db.DateTime())
 	links = relationship('Link', backref='email')
+	# sent = db.Column(db.Boolean, index=False, default=False)
+	# scheduled_for = db.Column(db.DateTime())
 	app_id = db.Column(db.Integer, db.ForeignKey("app.id"), nullable=True)
 	thread_id = db.Column(db.Integer, db.ForeignKey("thread.id"), nullable=True)
 

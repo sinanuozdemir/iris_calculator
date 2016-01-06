@@ -37,6 +37,12 @@ def handleApp(appid = None):
 		print "looking for replies to thread %s which currently has %d messages in it" % thread
 		checkForReplies(thread[0], access_token, from_ = 'google')
 		thread[0].last_checked = datetime.now()
+		tos, froms = [], []
+		for t, f in [(t.to_address, t.from_address) for t in thread[0].emails]:
+			tos += t.split(',')
+			froms += f.split(',')
+		thread[0].people_in_conversation = len(set(tos) | set(froms))
+		thread[0].all_parties_replied = len(set(tos) | set(froms)) == len(set(tos) & set(froms))
 		db.session.commit()
 	return {'status':'done', 'appid':appid}
 
