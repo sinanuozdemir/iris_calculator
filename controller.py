@@ -614,10 +614,12 @@ def handleApp():
 
 
 
-
 @application.route('/check',methods=['GET'])
 def check():
-	modles.handleRandomApp()
+	print "checking"
+	scheduler = Scheduler(5, modles.handleRandomApp)
+	scheduler.start()
+	print "Started schedule"
 	return None
 	
 
@@ -628,9 +630,11 @@ class Scheduler(object):
 		self._t = None
 	def start(self):
 		if self._t is None:
+			print "Starting the timer"
 			self._t = Timer(self.sleep_time, self._run)
 			self._t.start()
 		else:
+			print "this timer is already running"
 			raise Exception("this timer is already running")
 	def _run(self):
 		self.function()

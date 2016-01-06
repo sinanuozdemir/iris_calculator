@@ -41,8 +41,8 @@ def handleApp(appid = None):
 		thread[0].last_checked = datetime.now()
 		tos, froms = [], []
 		for t, f in [(t.to_address, t.from_address) for t in thread[0].emails]:
-			tos += t.split(',')
-			froms += f.split(',')
+			tos += [a.lower() for a in t.split(',')]
+			froms += [a.lower() for a in f.split(',')]
 		thread[0].people_in_conversation = len(set(tos) | set(froms))
 		thread[0].all_parties_replied = len(set(tos) | set(froms)) == len(set(tos) & set(froms))
 		db.session.commit()
