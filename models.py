@@ -96,7 +96,6 @@ class Link(db.Model):
 	url = db.Column(db.String(1024), index=True)
 	text = db.Column(db.String(1024), index=True)
 	opens = relationship('Visit', backref='link')
-
 	app_id = db.Column(db.Integer, db.ForeignKey("app.id"), nullable=True)
 	email_id = db.Column(db.Integer, db.ForeignKey("email.id"), nullable=True)
 

@@ -462,8 +462,6 @@ def sendEmail():
 	app = modules.getModel(models.App, appid = request.form.get('appid'))
 	if not app or not app.user.is_verified:
 		return jsonify(success=False, reason='app not there or user not verified')
-	session['appid'] = appid
-	print requests.get('https://www.latracking.com/setItDown').json()
 	html = request.form.get('html', '')
 	if html:
 		links = []
@@ -486,6 +484,7 @@ def sendEmail():
 	response = {'threadId':'test'}
 	email = db.session.query(models.Email).filter_by(id=e['email_id']).first()
 	# email.google_message_id = response['id']
+	#ADDDDDD uncomment these
 	email.from_address = app.google_email
 	thread_created = False
 	while not thread_created:
@@ -495,7 +494,9 @@ def sendEmail():
 	email.thread_id = thread.id
 	email.date_sent = datetime.utcnow()
 	db.session.commit()
-	return jsonify(success=True, links=links, cleaned_html=str(soup), email=e, threadid = random_thread)
+	j = jsonify(success=True, links=links, cleaned_html=str(soup), email=e, threadid = random_thread)
+	j.set_cookie('LATrackingID', value=appid, max_age=None, expires=datetime.now()+timedelta(days=365))
+	return j
 
 
 
