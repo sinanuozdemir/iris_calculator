@@ -481,7 +481,6 @@ def sendEmail():
 	access_token = modles.appGoogleAPI(app)
 	response = googleAPI.sendEmail(email = app.google_email, access_token = access_token, to_address = d['to_address'], subject = d.get('subject', ''), bcc_address = d.get('bcc_address', ''), html = html, text = request.form.get('text', ''))
 	print response
-	response = {'threadId':'test'}
 	email = db.session.query(models.Email).filter_by(id=e['email_id']).first()
 	email.google_message_id = response['id']
 	email.from_address = app.google_email
