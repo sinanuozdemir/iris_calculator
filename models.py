@@ -54,6 +54,7 @@ class Thread(db.Model):
 	__tablename__ = "thread"
 	id = db.Column(db.Integer, primary_key=True)
 	emails = relationship('Email', backref='thread')
+	threadid = db.Column(db.String(64), index=True, unique=True)
 	origin = db.Column(db.String(128), index=True)
 	unique_thread_id = db.Column(db.String(128), index=True)
 	all_parties_replied = db.Column(db.Boolean, index=False, default=False)
@@ -121,6 +122,7 @@ class Visit(db.Model):
 	website_id = db.Column(db.Integer, db.ForeignKey("website.id"), nullable=True)
 	email_id = db.Column(db.Integer, db.ForeignKey("email.id"), nullable=True)
 	link_id = db.Column(db.Integer, db.ForeignKey("link.id"), nullable=True)
+	app_id = db.Column(db.Integer, db.ForeignKey("app.id"), nullable=True)
 	after = db.Column(db.String(1024), index=False, unique=False)
 	gets = db.Column(db.String(1024), index=False, unique=False)
 	events = relationship('Event', backref='event')

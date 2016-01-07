@@ -3,7 +3,7 @@
 import googleAPI
 from threading import Timer
 from datetime import timedelta
-from flask import make_response, request, current_app, Flask, g
+from flask import make_response, request, current_app, Flask, g, session
 import os
 from flask_mail import Mail, Message
 from functools import update_wrapper, wraps
@@ -105,7 +105,7 @@ def page_not_found(e): return render_template('404.html'), 404
 ######## TRACKING ##########
 ############################
 
-@application.route("/r/<path:l>", methods=['GET'])
+@application.route("/r<path:l>/", methods=['GET'])
 def _redirect(l):
 	d = {}
 	d['private_ip'] = request.environ.get('REMOTE_ADDR')
@@ -138,6 +138,9 @@ def _redirect(l):
 @application.route("/e/<path:e>", methods=['GET'])
 def emailOpen(e):
 	d = {}
+	if request.cookies.get('LATrackingID'):
+		a = modules.getModel(models.App, appid = request.cookies.get('LATrackingID'))
+		d['app_id'] = a.id
 	d['private_ip'] = request.environ.get('REMOTE_ADDR')
 	d['public_ip'] = request.environ.get('HTTP_X_FORWARDED_FOR')
 	d['full_url'] = request.environ.get('HTTP_REFERER', '').strip().lower()
@@ -308,7 +311,6 @@ def verify(v):
 		u.is_verified = True
 		db.session.commit()
 		login_user(u, remember=True, force=True, fresh=False)
-		setItDown()
 	return jsonify(**{})
 
 @application.route('/login',methods=['GET', 'POST'])
@@ -388,23 +390,17 @@ def makeNewUser():
 # gets appd for a given email, if it doesn't exist, itll make one
 def getAppIDForEmail(email, app_dict = {}):
 	u, t = modules.get_or_create(models.User, email=email, defaults={'is_verified':True})
+	print u.id
 	apps = db.session.query(models.App).filter_by(user = u).all()
 	if len(apps):
 		return apps[0].appid
-	app_created = False
-	w, w_c = modules.get_or_create(models.Website, base=email.split('@')[1].lower().strip())
-	while not app_created:
-		random_appid = 'aa'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(9))
-		app_dict.update({'user':u, 'user_id':u.id, 'website': w})
-		app, app_created = modules.get_or_create(models.App, appid=random_appid, defaults = app_dict)
-	return random_appid
+	return None
 
-# drops a cooke on the users computer based on current user
 @application.route('/setItDown',methods=['GET'])
-@login_required
 def setItDown():
-	a = getAppIDForEmail(current_user.email)
+	a = session['appid']
 	out = jsonify(appid=a)
+	print a
 	out.set_cookie('LATrackingID', value=a, max_age=None, expires=datetime.now()+timedelta(days=365))
 	return out
 	
@@ -459,11 +455,14 @@ def _makeDBEmail(form_dict):
 @application.route('/sendEmail',methods=['POST', 'OPTIONS'])
 @crossdomain(origin='*')
 def sendEmail():
-	if 'appid' not in request.form: return jsonify(success=False, reason='need tracking_id')
+	if 'appid' not in request.form: 
+		return jsonify(success=False, reason='need tracking_id')
 	appid = request.form['appid']
 	app = modules.getModel(models.App, appid = request.form.get('appid'))
 	if not app or not app.user.is_verified:
 		return jsonify(success=False, reason='app not there or user not verified')
+	session['appid'] = appid
+	print requests.get('https://www.latracking.com/setItDown').json()
 	html = request.form.get('html', '')
 	if html:
 		links = []
@@ -481,18 +480,21 @@ def sendEmail():
 		soup.append(new_tag)
 		html = str(soup)
 	access_token = modles.appGoogleAPI(app)
-	response = googleAPI.sendEmail(email = app.google_email, access_token = access_token, to_address = d['to_address'], subject = d.get('subject', ''), bcc_address = d.get('bcc_address', ''), html = html, text = request.form.get('text', ''))
-	print response
-
+	# response = googleAPI.sendEmail(email = app.google_email, access_token = access_token, to_address = d['to_address'], subject = d.get('subject', ''), bcc_address = d.get('bcc_address', ''), html = html, text = request.form.get('text', ''))
+	# print response
+	response = {'threadId':'test'}
 	email = db.session.query(models.Email).filter_by(id=e['email_id']).first()
-	email.google_message_id = response['id']
+	# email.google_message_id = response['id']
 	email.from_address = app.google_email
-	thread, thread_created = modules.get_or_create(models.Thread, unique_thread_id = response['threadId'], origin='google', app_id = app.id, defaults = {'first_made':datetime.now()})
+	thread_created = False
+	while not thread_created:
+		random_thread = 'tt'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(9))
+		thread, thread_created = modules.get_or_create(models.Thread, threadid=random_thread, unique_thread_id = response['threadId'], origin='google', app_id = app.id, defaults = {'first_made':datetime.now()})
 	email.google_thread_id = response['threadId']
 	email.thread_id = thread.id
 	email.date_sent = datetime.utcnow()
 	db.session.commit()
-	return jsonify(success=True, links=links, cleaned_html=str(soup), email=e)
+	return jsonify(success=True, links=links, cleaned_html=str(soup), email=e, threadid = random_thread)
 
 
 
@@ -554,6 +556,23 @@ def _getStatsOnGoogleThread(threadId):
 	except:
 		to_return['date_of_last_open'] =  None
 	return to_return
+
+@application.route('/getInfoOnEmail',methods=['POST'])
+def getInfoOnEmail():
+	if 'appid' not in request.form or ('email' not in request.form):
+		return jsonify(success=False, reason='appid not in POST')
+	email_id = request.form.get('email', '')
+	a = db.session.query(models.App).filter_by(appid=request.form['appid']).first()
+	if not a:
+		return jsonify(success=False, reason='no such app found')
+	a = a.id
+	email = db.session.query(models.Email).filter(emailid=email_id)
+	to_return = {'threads':[]}
+	for e in emails:
+		if e.google_thread_id:
+			to_return['threads'].append( _getStatsOnGoogleThread(e.google_thread_id) )
+	to_return['threads'] = sorted(to_return['threads'], key=lambda x:x['date_of_first_message'])
+	return jsonify(success=True, threads = to_return)
 
 @application.route('/getInfoOnEmails',methods=['POST'])
 def getInfoOnEmails():
@@ -652,7 +671,7 @@ class Scheduler(object):
 
 application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
 
-DEBUG = True
+DEBUG = False
 
 if __name__ == '__main__':
 	print "RAN THE MAIN METHOD"
