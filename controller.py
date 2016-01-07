@@ -479,12 +479,11 @@ def sendEmail():
 		soup.append(new_tag)
 		html = str(soup)
 	access_token = modles.appGoogleAPI(app)
-	# response = googleAPI.sendEmail(email = app.google_email, access_token = access_token, to_address = d['to_address'], subject = d.get('subject', ''), bcc_address = d.get('bcc_address', ''), html = html, text = request.form.get('text', ''))
-	# print response
+	response = googleAPI.sendEmail(email = app.google_email, access_token = access_token, to_address = d['to_address'], subject = d.get('subject', ''), bcc_address = d.get('bcc_address', ''), html = html, text = request.form.get('text', ''))
+	print response
 	response = {'threadId':'test'}
 	email = db.session.query(models.Email).filter_by(id=e['email_id']).first()
-	# email.google_message_id = response['id']
-	#ADDDDDD uncomment these
+	email.google_message_id = response['id']
 	email.from_address = app.google_email
 	thread_created = False
 	while not thread_created:
@@ -561,19 +560,18 @@ def _getStatsOnGoogleThread(threadId):
 
 @application.route('/getInfoOnEmail',methods=['POST'])
 def getInfoOnEmail():
-	if 'appid' not in request.form or ('email' not in request.form):
+	if 'appid' not in request.form or 'email' not in request.form:
 		return jsonify(success=False, reason='appid not in POST')
 	email_id = request.form.get('email', '')
 	a = db.session.query(models.App).filter_by(appid=request.form['appid']).first()
 	if not a:
 		return jsonify(success=False, reason='no such app found')
 	a = a.id
-	email = db.session.query(models.Email).filter(emailid=email_id)
-	to_return = {'threads':[]}
-	for e in emails:
-		if e.google_thread_id:
-			to_return['threads'].append( _getStatsOnGoogleThread(e.google_thread_id) )
-	to_return['threads'] = sorted(to_return['threads'], key=lambda x:x['date_of_first_message'])
+	email = modules.getModel(models.Email, emailid = email_id)
+	to_return = {}
+	print email.google_message_id
+	if email.google_message_id:
+		to_return['thread'] =  _getStatsOnGoogleThread(email.thread.unique_thread_id)
 	return jsonify(success=True, threads = to_return)
 
 @application.route('/getInfoOnEmails',methods=['POST'])
