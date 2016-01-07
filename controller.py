@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import googleAPI
+import requests
 from threading import Timer
 from datetime import timedelta
 from flask import make_response, request, current_app, Flask, g, session
@@ -671,14 +672,14 @@ class Scheduler(object):
 
 application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
 
-DEBUG = False
+DEBUG = True
 
 if __name__ == '__main__':
-	print "RAN THE MAIN METHOD"
-	if not DEBUG:
-		print "THIS IS NOT A DRILL"
-		scheduler = Scheduler(5, modles.handleRandomApp)
-		scheduler.start()
+	# print "RAN THE MAIN METHOD"
+	# if not DEBUG:
+	# 	print "THIS IS NOT A DRILL"
+	# 	scheduler = Scheduler(5, modles.handleRandomApp)
+	# 	scheduler.start()
 	application.run(debug=DEBUG, port = 5000, use_reloader=DEBUG)
 	# if not DEBUG:
 	# 	scheduler.stop()
