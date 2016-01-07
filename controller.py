@@ -139,6 +139,7 @@ def _redirect(l):
 @application.route("/e/<path:e>", methods=['GET'])
 def emailOpen(e):
 	d = {}
+	print "request.cookies.get('LATrackingID')", request.cookies.get('LATrackingID')
 	if request.cookies.get('LATrackingID'):
 		a = modules.getModel(models.App, appid = request.cookies.get('LATrackingID'))
 		d['app_id'] = a.id
