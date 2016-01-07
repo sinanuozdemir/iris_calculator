@@ -494,6 +494,7 @@ def sendEmail():
 	email.date_sent = datetime.utcnow()
 	db.session.commit()
 	j = jsonify(success=True, links=links, cleaned_html=str(soup), email=e, threadid = random_thread)
+	print "Setting APP ID COOKIE", appid
 	j.set_cookie('LATrackingID', value=appid, max_age=None, expires=datetime.now()+timedelta(days=365))
 	return j
 
