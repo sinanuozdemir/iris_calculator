@@ -480,8 +480,10 @@ def sendEmail():
 		soup.append(new_tag)
 		html = str(soup)
 	access_token = modles.appGoogleAPI(app)
-	response = googleAPI.sendEmail(email = app.google_email, access_token = access_token, to_address = d['to_address'], subject = d.get('subject', ''), bcc_address = d.get('bcc_address', ''), html = html, text = request.form.get('text', ''))
-	print response
+	threadID = None
+	if request.form.get('threadID'):
+		threadID = modules.getModel(models.Thread, threadid=request.form.get('threadID')).unique_thread_id
+	response = googleAPI.sendEmail(email = app.google_email, access_token = access_token, to_address = d['to_address'], subject = d.get('subject', ''), bcc_address = d.get('bcc_address', ''), html = html, text = request.form.get('text', ''), threadID = threadID)
 	email = db.session.query(models.Email).filter_by(id=e['email_id']).first()
 	email.google_message_id = response['id']
 	email.from_address = app.google_email
@@ -494,7 +496,6 @@ def sendEmail():
 	email.date_sent = datetime.utcnow()
 	db.session.commit()
 	j = jsonify(success=True, links=links, cleaned_html=str(soup), email=e, threadid = random_thread)
-	print "Setting APP ID COOKIE", appid
 	j.set_cookie('LATrackingID', value=appid, max_age=None, expires=datetime.now()+timedelta(days=365))
 	return j
 
@@ -506,13 +507,14 @@ def sendEmail():
 ####### Notifications ######
 ############################
 
-def cleanVisit(visit):
+def cleanVisit(visit, app_id):
 	d = {}
 	d['state'] = visit.state
 	d['country'] = visit.country
 	d['city'] = visit.city
 	d['public_ip'] = visit.public_ip
 	d['private_ip'] = visit.private_ip
+	d['opened_by_recipient'] = visit.app_id != app_id
 	d['seconds_ago'] = int((datetime.utcnow() - visit.date).total_seconds())
 	d['date'] = datetime.strftime(visit.date, '%m-%d-%Y %H:%M')
 	return d
@@ -528,8 +530,11 @@ def cleanEmail(e):
 		d['text'] = bs(e.html).text
 	else:
 		d['text'] = e.text
+	d['times_opened'] = len(e.opens)
 	d['date_sent'] = datetime.strftime(e.date_sent, '%m-%d-%Y %H:%M')
-	d['last_few_opens'] = map(cleanVisit,e.opens[-3:])
+	all_opens = [cleanVisit(r, e.app_id) for r in e.opens]
+	d['last_few_opens'] = all_opens[-3:]
+	d['ever_opened_by_recipient'] = sum([a['opened_by_recipient'] for a in all_opens]) > 0
 	d['links'] = map(cleanLink, e.links)
 	return d
 
@@ -543,6 +548,7 @@ def cleanLink(e):
 
 def _getStatsOnGoogleThread(threadId):
 	thread = modules.getModel(models.Thread, unique_thread_id=threadId)
+	print thread.id
 	messages_in_thread = thread.emails
 	num_messages = len(messages_in_thread)
 	from_addresses = list(set([e.from_address for e in messages_in_thread if e.from_address]))
@@ -571,7 +577,7 @@ def getInfoOnEmail():
 	email = modules.getModel(models.Email, emailid = email_id)
 	to_return = {}
 	print email.google_message_id
-	if email.google_message_id:
+	if email.google_message_id: #is a google message
 		to_return['thread'] =  _getStatsOnGoogleThread(email.thread.unique_thread_id)
 	return jsonify(success=True, threads = to_return)
 

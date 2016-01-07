@@ -127,7 +127,7 @@ def refreshAccessToken(access, refresh):
 
 
 #ADDDDD send as part of a thread
-def sendEmail(email, access_token, to_address, text = '', subject = '', bcc_address = None, html = ''):
+def sendEmail(email, access_token, to_address, text = '', subject = '', bcc_address = None, html = '', threadID = None):
 	url = 'https://www.googleapis.com/gmail/v1/users/me/messages/send'
 	headers = {}
 	headers['content-type'] = 'application/json'
@@ -144,7 +144,10 @@ def sendEmail(email, access_token, to_address, text = '', subject = '', bcc_addr
 	part2 = MIMEText(html, 'html')
 	message.attach(part1)
 	message.attach(part2)
-	data = json.dumps({'raw': base64.urlsafe_b64encode(message.as_string())})
+	data = {'raw': base64.urlsafe_b64encode(message.as_string())}
+	if threadID:
+		data['threadID'] = threadID
+	data = json.dumps(data)
 	try:
 		r = requests.post(url, data=data, headers = headers)
 		return r.json()
