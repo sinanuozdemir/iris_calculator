@@ -394,7 +394,7 @@ def getAppIDForEmail(email, app_dict = {}):
 	app_created = False
 	w, w_c = modules.get_or_create(models.Website, base=email.split('@')[1].lower().strip())
 	while not app_created:
-		random_appid = 'aa'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(62))
+		random_appid = 'aa'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(9))
 		app_dict.update({'user':u, 'user_id':u.id, 'website': w})
 		app, app_created = modules.get_or_create(models.App, appid=random_appid, defaults = app_dict)
 	return random_appid
@@ -432,7 +432,7 @@ def _makeDBLink(email_id, text, url, appid):
 	if app:
 		created = False
 		while not created:
-			random_link = 'll'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(62))
+			random_link = 'll'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(9))
 			l, created = modules.get_or_create(models.Link, linkid=random_link, defaults = {'app_id':app.id, 'email_id':email_id, 'url':u, 'text': text})
 		return {'success':True, 'link_id':random_link, 'url':u, 'latracking_url':'https://latracking.com/r/'+random_link}
 	return {'success':False}
@@ -444,7 +444,7 @@ def _makeDBEmail(form_dict):
 		created = False
 		d['app_id'] = app.id
 		while not created:
-			random_email = 'ee'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(62))
+			random_email = 'ee'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(9))
 			for i in ['google_message_id', 'google_thread_id', 'date_sent', 'text', 'html', 'cc_address', 'bcc_address', 'to_address', 'from_address', 'subject']:
 				if i in form_dict: 
 					d[i] = form_dict[i]
@@ -538,13 +538,15 @@ def cleanLink(e):
 	return d
 
 def _getStatsOnGoogleThread(threadId):
-	messages_in_thread = db.session.query(models.Email).filter(models.Email.google_thread_id==threadId).all()
+	thread = modules.getModel(models.Thread, unique_thread_id=threadId)
+	messages_in_thread = thread.emails
 	num_messages = len(messages_in_thread)
 	from_addresses = list(set([e.from_address for e in messages_in_thread if e.from_address]))
 	has_bounce = sum([e.bounce for e in messages_in_thread if e.from_address]) > 0
 
 	to_addresses = list(set([e.to_address for e in messages_in_thread if e.to_address]))
-	to_return = {'type':'google', 'thread_id':threadId, 'messages':sorted(map(cleanEmail,messages_in_thread), key=lambda x:x['date_sent']), 'has_bounce':has_bounce, 'num_messages':num_messages, 'from_addresses':from_addresses, 'to_addresses':to_addresses}
+	to_return = {'type':'google', 'unique_thread_id':threadId, 'messages':sorted(map(cleanEmail,messages_in_thread), key=lambda x:x['date_sent']), 'has_bounce':has_bounce, 'num_messages':num_messages, 'from_addresses':from_addresses, 'to_addresses':to_addresses}
+	to_return['all_parties_replied'] = thread.all_parties_replied
 	to_return['date_of_first_message'] = to_return['messages'][0]['date_sent']
 	to_return['bounced_emails'] = [e.bounced_email for e in messages_in_thread if e.bounced_email]
 	try:
@@ -650,7 +652,7 @@ class Scheduler(object):
 
 application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
 
-DEBUG = False
+DEBUG = True
 
 if __name__ == '__main__':
 	print "RAN THE MAIN METHOD"
