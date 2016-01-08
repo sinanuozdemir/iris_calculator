@@ -692,7 +692,6 @@ class Scheduler(object):
 def startScheduler():
 	scheduler = Scheduler(5, modles.handleRandomApp)
 	scheduler.start()
-	scheduler.stop()
 
 
 
