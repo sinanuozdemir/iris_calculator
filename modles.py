@@ -51,7 +51,6 @@ def handleApp(appid = None):
 
 def handleRandomApp():
 	print "attempting to handle a random app"
-	print db.session.query(models.App.appid).all()
 	u = random.sample(db.session.query(models.App.appid).all(), 1)[0][0]
 	handleApp(u)
 	return True

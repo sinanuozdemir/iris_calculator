@@ -140,6 +140,10 @@ def _redirect(l):
 @application.route("/e/<path:e>", methods=['GET'])
 def emailOpen(e):
 	d = {}
+	print request.environ
+	print
+	print
+	print request.cookies
 	print "request.cookies.get('LATrackingID')", request.cookies.get('LATrackingID')
 	if request.cookies.get('LATrackingID'):
 		a = modules.getModel(models.App, appid = request.cookies.get('LATrackingID'))
@@ -701,14 +705,7 @@ application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jfjhbsdfjhvbskcgvbdf39457
 DEBUG = True
 
 if __name__ == '__main__':
-	# print "RAN THE MAIN METHOD"
-	# if not DEBUG:
-	# 	print "THIS IS NOT A DRILL"
-	# 	scheduler = Scheduler(5, modles.handleRandomApp)
-	# 	scheduler.start()
 	application.run(debug=DEBUG, port = 5000, use_reloader=DEBUG)
-	# if not DEBUG:
-	# 	scheduler.stop()
 
 
 
