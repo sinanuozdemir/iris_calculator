@@ -343,7 +343,7 @@ def login():
 				db.session.add(u)
 				db.session.commit()
 				msg = Message("Click me", sender="verifications@latracking.com", recipients=[email])
-				msg.html = '<b><a href="https://latracking.com/v/'+login_check_+'">click me</a></b>'
+				msg.html = '<b><a href="http://latracking.com/v/'+login_check_+'">click me</a></b>'
 				mail.send(msg)
 				login_user(u, remember=True, force=True, fresh=False)
 			return redirect('/test')
@@ -459,7 +459,7 @@ def _makeDBEmail(form_dict):
 					elif i == 'html':
 						d['makeshift_sentiment'] = googleAPI.MakeshiftSentiment(bs(d[i]).text)
 			e, created = modules.get_or_create(models.Email, emailid=random_email, **d)
-		return {'success':True, 'email_id':e.id, 'emailid':random_email, 'tracking_link':'https://www.latracking.com/e/'+random_email}
+		return {'success':True, 'email_id':e.id, 'emailid':random_email, 'tracking_link':'http://www.latracking.com/e/'+random_email}
 	return {'success':False}
 
 @application.route('/sendEmail',methods=['POST', 'OPTIONS'])
