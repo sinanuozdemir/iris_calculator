@@ -144,6 +144,9 @@ def emailOpen(e):
 	print
 	print
 	print request.cookies
+	print
+	print
+	print session
 	print "request.cookies.get('LATrackingID')", request.cookies.get('LATrackingID')
 	if request.cookies.get('LATrackingID'):
 		a = modules.getModel(models.App, appid = request.cookies.get('LATrackingID'))
@@ -502,6 +505,7 @@ def sendEmail():
 	db.session.commit()
 	j = jsonify(success=True, links=links, cleaned_html=str(soup), email=e, threadid = random_thread)
 	j.set_cookie('LATrackingID', value=appid, max_age=None, expires=datetime.now()+timedelta(days=365))
+	session['LATrackingID'] = appid
 	return j
 
 
