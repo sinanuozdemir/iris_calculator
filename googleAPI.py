@@ -100,7 +100,7 @@ def cleanMessage(m):
 		new_m['text'] = bs(new_m['html']).text
 	if new_m.get('text'):
 		new_m['makeshift_sentiment'] = MakeshiftSentiment(new_m.get('text'))
-	new_m['emailid'] = 'ee'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(62))
+	new_m['emailid'] = 'ee'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(9))
 	new_m['bounce'] = detectBouncedEmailFromMessage(m) is not None
 	new_m['bounced_email'] = detectBouncedEmailFromMessage(m)
 	return {k:v for k, v in new_m.iteritems() if v is not None and v != '' and v != []}

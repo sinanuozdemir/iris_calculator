@@ -2,6 +2,7 @@
 
 import googleAPI
 import requests
+from sqlalchemy import and_
 from threading import Timer
 from datetime import timedelta
 from flask import make_response, request, current_app, Flask, g, session
@@ -330,7 +331,7 @@ def login():
 				u.is_active = True
 				u.is_authenticated = True
 				u.is_verified = False
-				login_check_ = 'uu'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(30))
+				login_check_ = 'uu'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(9))
 				u.login_check = login_check_
 				db.session.add(u)
 				db.session.commit()
@@ -581,8 +582,10 @@ def getInfoOnEmail():
 		to_return['thread'] =  _getStatsOnGoogleThread(email.thread.unique_thread_id)
 	return jsonify(success=True, threads = to_return)
 
-@application.route('/getInfoOnEmails',methods=['POST'])
-def getInfoOnEmails():
+
+
+@application.route('/getStatsOnEmails',methods=['POST'])
+def getStatsOnEmails():
 	if 'appid' not in request.form or ('emails' not in request.form and 'tos' not in request.form):
 		return jsonify(success=False, reason='appid not in POST')
 	email_ids = [a.strip() for a in request.form.get('emails', '').split(',') if a]
@@ -591,12 +594,11 @@ def getInfoOnEmails():
 	if not a:
 		return jsonify(success=False, reason='no such app found')
 	a = a.id
-	if tos: emails = db.session.query(models.Email).filter(models.Email.to_address.in_(tos)).filter_by(app_id=a).all()
-	elif email_ids:emails = db.session.query(models.Email).filter(models.Email.emailid.in_(email_ids)).filter_by(app_id=a).all()
+	emails = db.session.query(models.Email).filter(models.Email.emailid.in_(email_ids)).filter_by(app_id=a).all()
 	to_return = {'threads':[]}
 	for e in emails:
-		if e.google_thread_id:
-			to_return['threads'].append( _getStatsOnGoogleThread(e.google_thread_id) )
+		if e.google_thread_id: # is a google message
+			to_return['threads'].append( _getStatsOnGoogleThread(e.thread.unique_thread_id) )
 	to_return['threads'] = sorted(to_return['threads'], key=lambda x:x['date_of_first_message'])
 	return jsonify(success=True, threads = to_return)
 
@@ -632,23 +634,33 @@ def getNotifications():
 	return jsonify(links=n_l, emails=n_e, appid=long_id)
 
 
-@application.route('/handleApp',methods=['GET'])
-def handleApp():
-	modles.handleApp(request.args.get('appid'))
+def handleApp(i):
+	modles.handleApp(i)
 
 
 
-
+@application.route('/emailStats',methods=['POST'])
+def emailStats():
+	emailids = request.form.get('emailids').split(',')
+	emails = db.session.query(models.Email).filter(models.Email.emailid.in_(emailids)).all()
+	ids = [e.id for e in emails]
+	num_emails = float(len(ids))
+	opens = sum([len(e.opens) > 0 for e in emails])
+	bounces = db.session.query(models.Email).filter(and_(models.Email.replied_to.in_(ids), models.Email.bounce==True)).count()
+	replies = db.session.query(models.Email).filter(and_(models.Email.replied_to.in_(ids), models.Email.bounce==False)).count()
+	clicks = sum([sum([len(l.opens) for l in e.links])>0 for e in emails])
+	return jsonify(bounce_rate=round(bounces/num_emails, 2), open_rate=round(opens/num_emails, 2), click_rate=round(clicks/num_emails, 2), reply_rate=round(replies/num_emails, 2))
 
 
 
 @application.route('/check',methods=['GET'])
 def check():
-	print "checking"
-	scheduler = Scheduler(5, modles.handleRandomApp)
-	scheduler.start()
-	print "Started schedule"
+	# print "checking"
+	# scheduler = Scheduler(5, modles.handleRandomApp)
+	# scheduler.start()
+	# print "Started schedule"
 	return None
+
 	
 
 class Scheduler(object):
@@ -674,6 +686,15 @@ class Scheduler(object):
 		if self._t is not None:
 			self._t.cancel()
 			self._t = None
+
+
+@application.before_first_request
+def startScheduler():
+	scheduler = Scheduler(5, modles.handleRandomApp)
+	scheduler.start()
+	scheduler.stop()
+
+
 
 
 application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jfjhbsdfjhvbskcgvbdf394574LWX/,?RT'

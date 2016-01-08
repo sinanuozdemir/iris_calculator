@@ -20,6 +20,7 @@ def checkForReplies(thread, access_token, from_ = 'google'):
 		for message in googleAPI.getThreadMessages(thread.unique_thread_id, access_token):
 			g = googleAPI.cleanMessage(message)
 			g['thread_id'] = thread.id
+			g['replied_to'] = thread.emails[-1].id
 			modules.get_or_create(models.Email, google_message_id=g['google_message_id'], defaults = g)
 
 def getThreadsOfApp(app, from_ = 'google'):
@@ -50,6 +51,7 @@ def handleApp(appid = None):
 
 def handleRandomApp():
 	print "attempting to handle a random app"
+	print db.session.query(models.App.appid).all()
 	u = random.sample(db.session.query(models.App.appid).all(), 1)[0][0]
 	handleApp(u)
 	return True
