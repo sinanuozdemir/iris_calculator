@@ -107,12 +107,15 @@ def page_not_found(e): return render_template('404.html'), 404
 ######## TRACKING ##########
 ############################
 
-@application.route("/r<path:l>/", methods=['GET'])
+@application.route("/r/<path:l>/", methods=['GET'])
 def _redirect(l):
 	d = {}
 	d['private_ip'] = request.environ.get('REMOTE_ADDR')
 	d['public_ip'] = request.environ.get('HTTP_X_FORWARDED_FOR')
 	d['full_url'] = request.environ.get('HTTP_REFERER', '').strip().lower()
+	if request.cookies.get('LATrackingID'):
+		a = modules.getModel(models.App, appid = request.cookies.get('LATrackingID'))
+		d['app_id'] = a.id
 	link = db.session.query(models.Link).filter_by(linkid=l).first()
 	if link:
 		red_url = link.url
@@ -440,7 +443,7 @@ def _makeDBLink(email_id, text, url, appid):
 		while not created:
 			random_link = 'll'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(9))
 			l, created = modules.get_or_create(models.Link, linkid=random_link, defaults = {'app_id':app.id, 'email_id':email_id, 'url':u, 'text': text})
-		return {'success':True, 'link_id':random_link, 'url':u, 'latracking_url':'https://latracking.com/r/'+random_link}
+		return {'success':True, 'link_id':random_link, 'url':u, 'latracking_url':'https://www.latracking.com/r/'+random_link}
 	return {'success':False}
 
 def _makeDBEmail(form_dict):
@@ -650,23 +653,20 @@ def handleApp(i):
 @application.route('/emailStats',methods=['POST'])
 def emailStats():
 	emailids = request.form.get('emailids').split(',')
+	a = modules.getModel(models.App, appid=request.form.get('appid')).id
 	emails = db.session.query(models.Email).filter(models.Email.emailid.in_(emailids)).all()
 	ids = [e.id for e in emails]
 	num_emails = float(len(ids))
-	opens = sum([len(e.opens) > 0 for e in emails])
+	opens = sum([len([r for r in e.opens if r.app_id != a]) > 0 for e in emails])
 	bounces = db.session.query(models.Email).filter(and_(models.Email.replied_to.in_(ids), models.Email.bounce==True)).count()
 	replies = db.session.query(models.Email).filter(and_(models.Email.replied_to.in_(ids), models.Email.bounce==False)).count()
-	clicks = sum([sum([len(l.opens) for l in e.links])>0 for e in emails])
+	clicks = sum([sum([len([r for r in l.opens if r.app_id != a]) for l in e.links])>0 for e in emails])
 	return jsonify(bounce_rate=round(bounces/num_emails, 2), open_rate=round(opens/num_emails, 2), click_rate=round(clicks/num_emails, 2), reply_rate=round(replies/num_emails, 2))
 
 
 
 @application.route('/check',methods=['GET'])
 def check():
-	# print "checking"
-	# scheduler = Scheduler(5, modles.handleRandomApp)
-	# scheduler.start()
-	# print "Started schedule"
 	return None
 
 	
