@@ -28,6 +28,8 @@ def getThreadsOfApp(app, from_ = 'google'):
 	ids = [(t, len(t.emails)) for t in threads if t.origin == from_ and t.first_made > (datetime.now()-timedelta(days=60)) and (t.last_checked is None or t.last_checked <(datetime.now() - timedelta(hours=1)))]
 	return ids
 
+
+#ADDDD eventually need to see if its an outlook or google thread
 def handleApp(appid = None):
 	if not appid: return False
 	print "checking app %s" %(appid)

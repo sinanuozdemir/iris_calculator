@@ -1,5 +1,5 @@
 # coding: utf-8
-
+import validate_email
 import googleAPI
 import requests
 from sqlalchemy import and_
@@ -653,10 +653,25 @@ def handleApp(i):
 @application.route('/emailStats',methods=['POST'])
 def emailStats():
 	emailids = request.form.get('emailids').split(',')
-	a = modules.getModel(models.App, appid=request.form.get('appid')).id
+	try:
+		a = modules.getModel(models.App, appid=request.form.get('appid')).id
+	except:
+		return jsonify(fuck="off")
 	emails = db.session.query(models.Email).filter(models.Email.emailid.in_(emailids)).all()
 	ids = [e.id for e in emails]
 	num_emails = float(len(ids))
+	all_opens = db.session.query(models.Visit).filter(models.Visit.email_id.in_(ids)).all()
+	all_opens = [{'date':a.date, 'type':'open', 'email_id':a.email_id} for a in all_opens]
+	all_links = db.session.query(models.Link).filter(models.Link.email_id.in_(ids)).all()
+	link_ids = [l.id for l in all_links]
+	all_clicks = db.session.query(models.Visit).filter(models.Visit.link_id.in_(link_ids)).all()
+	all_clicks = [{'date':a.date, 'type':'click', 'email_id':a.email_id} for a in all_clicks]
+	# print all_opens, all_links, all_clicks
+
+	distinct_opens = len(set((o['email_id'] for o in all_opens)))
+	distinct_clicks = len(set((o['email_id'] for o in all_clicks)))
+	print distinct_clicks, distinct_opens
+
 	opens = sum([len([r for r in e.opens if r.app_id != a]) > 0 for e in emails])
 	bounces = db.session.query(models.Email).filter(and_(models.Email.replied_to.in_(ids), models.Email.bounce==True)).count()
 	replies = db.session.query(models.Email).filter(and_(models.Email.replied_to.in_(ids), models.Email.bounce==False)).count()
@@ -664,6 +679,22 @@ def emailStats():
 	return jsonify(bounce_rate=round(bounces/num_emails, 2), open_rate=round(opens/num_emails, 2), click_rate=round(clicks/num_emails, 2), reply_rate=round(replies/num_emails, 2))
 
 
+@application.route('/validate',methods=['GET'])
+def validate():
+	e = request.args['email'].strip().lower()
+	host, domain = e.split('@')
+	already_there = modules.getModel(models.EmailAddress, address = e)
+	if already_there:
+		print "returning what is there"
+		return jsonify(catch_all = already_there.domain.catch_all, is_deliverable=already_there.status)
+	already_there = modules.getModel(models.Domain, text=domain)
+	if already_there and already_there.catch_all:
+		print "returning what is there for domain being a catchall "
+		return jsonify(catch_all = already_there.catch_all, is_deliverable='Valid')
+	t =  validate_email.validate(e)
+	dom, dom_created = modules.get_or_create(models.Domain, text = domain, defaults = {'catch_all':t['catch_all']})
+	modules.get_or_create(models.EmailAddress, address = e, defaults = {'domain_id':dom.id, 'status':t['is_deliverable']})
+	return jsonify(**t)
 
 @application.route('/check',methods=['GET'])
 def check():
@@ -698,7 +729,7 @@ class Scheduler(object):
 
 @application.before_first_request
 def startScheduler():
-	scheduler = Scheduler(5, modles.handleRandomApp)
+	scheduler = Scheduler(10, modles.handleRandomApp)
 	scheduler.start()
 
 

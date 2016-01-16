@@ -3,6 +3,21 @@ from controller import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
+class Domain(db.Model):
+	__tablename__ = 'domain'
+	id = db.Column(db.Integer, primary_key=True)
+	text = db.Column(db.String(256), index=True, unique=True)
+	emails = relationship('EmailAddress', backref='domain')
+	catch_all = db.Column(db.Boolean, index=False, unique=False)
+
+
+class EmailAddress(db.Model):
+	__tablename__ = 'emailaddress'
+	id = db.Column(db.Integer, primary_key=True)
+	address = db.Column(db.String(256), index=True, unique=True)
+	status = db.Column(db.String(64), index=True)
+	domain_id = db.Column(db.Integer, db.ForeignKey("domain.id"), nullable=False)
+
 class App(db.Model):
 	__tablename__ = "app"
 	id = db.Column(db.Integer, primary_key=True)
