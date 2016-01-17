@@ -1,3 +1,5 @@
+import time
+import random
 import telnetlib
 import os
 import re
@@ -58,9 +60,13 @@ def validate(addressToVerify):
 
 	# SMTP Conversation
 	server.connect(mxRecord)
+	time.sleep(random.choice(range(3)))
 	server.helo(host)
+	time.sleep(random.choice(range(3)))
 	server.mail(addressToVerify)
+	time.sleep(random.choice(range(3)))
 	code, message = server.rcpt(str(addressToVerify))
+	time.sleep(random.choice(range(3)))
 	server.quit()
 	print code, message
 	# Assume 250 as Success

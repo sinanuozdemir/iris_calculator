@@ -94,7 +94,11 @@ time_zone = timezone('US/Eastern')
 login_manager.login_view = "login"
 
 
-def getUser(**kwargs): return db.session.query(models.User).filter_by(**kwargs).first()
+def getUser(**kwargs): 
+	try:
+		return db.session.query(models.User).filter_by(**kwargs).first()
+	except:
+		return None
 
 @application.errorhandler(404)
 def page_not_found(e): return render_template('404.html'), 404
@@ -727,17 +731,15 @@ class Scheduler(object):
 			self._t = None
 
 
+application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
+DEBUG = True
+
 @application.before_first_request
 def startScheduler():
 	scheduler = Scheduler(10, modles.handleRandomApp)
 	scheduler.start()
 
 
-
-
-application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
-
-DEBUG = True
 
 if __name__ == '__main__':
 	application.run(debug=DEBUG, port = 5000, use_reloader=DEBUG)
