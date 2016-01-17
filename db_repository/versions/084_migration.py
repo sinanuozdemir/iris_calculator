@@ -9,11 +9,13 @@ domain = Table('domain', post_meta,
     Column('id', Integer, primary_key=True, nullable=False),
     Column('text', String(length=256)),
     Column('catch_all', Boolean),
+    Column('valid', Boolean, default=ColumnDefault(True)),
 )
 
 emailaddress = Table('emailaddress', post_meta,
     Column('id', Integer, primary_key=True, nullable=False),
     Column('address', String(length=256)),
+    Column('status', String(length=64)),
     Column('domain_id', Integer, nullable=False),
 )
 

@@ -9,6 +9,7 @@ class Domain(db.Model):
 	text = db.Column(db.String(256), index=True, unique=True)
 	emails = relationship('EmailAddress', backref='domain')
 	catch_all = db.Column(db.Boolean, index=False, unique=False)
+	valid = db.Column(db.Boolean, index=False, unique=False, default = True)
 
 
 class EmailAddress(db.Model):

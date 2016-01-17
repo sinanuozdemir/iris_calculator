@@ -696,7 +696,8 @@ def validate():
 		print "returning what is there for domain being a catchall "
 		return jsonify(catch_all = already_there.catch_all, is_deliverable='Valid')
 	t =  validate_email.validate(e)
-	dom, dom_created = modules.get_or_create(models.Domain, text = domain, defaults = {'catch_all':t['catch_all']})
+	print t
+	dom, dom_created = modules.get_or_create(models.Domain, text = domain, defaults = {'catch_all':t.get('catch_all', False), 'valid': "no MX record found" != t.get('reason', '')})
 	modules.get_or_create(models.EmailAddress, address = e, defaults = {'domain_id':dom.id, 'status':t['is_deliverable']})
 	return jsonify(**t)
 
@@ -732,12 +733,13 @@ class Scheduler(object):
 
 
 application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
-DEBUG = True
+DEBUG = False
 
-@application.before_first_request
-def startScheduler():
-	scheduler = Scheduler(10, modles.handleRandomApp)
-	scheduler.start()
+if not DEBUG:
+	@application.before_first_request
+	def startScheduler():
+		scheduler = Scheduler(10, modles.handleRandomApp)
+		scheduler.start()
 
 
 

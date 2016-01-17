@@ -5,6 +5,7 @@ import os
 import re
 import socket
 import smtplib
+import dns.resolver
 
 # get domain host from 'nslookup'
 def getHost(domain) :
@@ -39,14 +40,15 @@ def validate(addressToVerify):
 		print 'Bad Syntax'
 		raise ValueError('Bad Syntax')
 
-	# records = dns.resolver.query(domain, 'MX')
-	# mxRecord = records[0].exchange
-	# mxRecord = str(mxRecord)
+	
 	try:
-		mxRecord = getHost(domain)
+		records = dns.resolver.query(domain, 'MX')
+		mxRecord = records[0].exchange
+		mxRecord = str(mxRecord)
+		# mxRecord = getHost(domain)
 	except:
 		return None
-
+	print mxRecord, "mx ercord"
 	if mxRecord is None:
 		return {'status':'failed', 'reason': 'no MX record found'}
 

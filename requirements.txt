@@ -17,3 +17,4 @@ beautifulsoup4==4.3.2
 Flask-Mail==0.9.1
 python-dateutil==2.4.2
 textblob==0.8.4
+dnspython==1.12.0
