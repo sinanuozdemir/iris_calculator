@@ -664,17 +664,17 @@ def emailStats():
 	emails = db.session.query(models.Email).filter(models.Email.emailid.in_(emailids)).all()
 	ids = [e.id for e in emails]
 	num_emails = float(len(ids))
-	all_opens = db.session.query(models.Visit).filter(models.Visit.email_id.in_(ids)).all()
-	all_opens = [{'date':a.date, 'type':'open', 'email_id':a.email_id} for a in all_opens]
-	all_links = db.session.query(models.Link).filter(models.Link.email_id.in_(ids)).all()
-	link_ids = [l.id for l in all_links]
-	all_clicks = db.session.query(models.Visit).filter(models.Visit.link_id.in_(link_ids)).all()
-	all_clicks = [{'date':a.date, 'type':'click', 'email_id':a.email_id} for a in all_clicks]
-	# print all_opens, all_links, all_clicks
+	# all_opens = db.session.query(models.Visit).filter(models.Visit.email_id.in_(ids)).all()
+	# all_opens = [{'date':a.date, 'type':'open', 'email_id':a.email_id} for a in all_opens]
+	# all_links = db.session.query(models.Link).filter(models.Link.email_id.in_(ids)).all()
+	# link_ids = [l.id for l in all_links]
+	# all_clicks = db.session.query(models.Visit).filter(models.Visit.link_id.in_(link_ids)).all()
+	# all_clicks = [{'date':a.date, 'type':'click', 'email_id':a.email_id} for a in all_clicks]
+	# # print all_opens, all_links, all_clicks
 
-	distinct_opens = len(set((o['email_id'] for o in all_opens)))
-	distinct_clicks = len(set((o['email_id'] for o in all_clicks)))
-	print distinct_clicks, distinct_opens
+	# distinct_opens = len(set((o['email_id'] for o in all_opens)))
+	# distinct_clicks = len(set((o['email_id'] for o in all_clicks)))
+	# print distinct_clicks, distinct_opens
 
 	opens = sum([len([r for r in e.opens if r.app_id != a]) > 0 for e in emails])
 	bounces = db.session.query(models.Email).filter(and_(models.Email.replied_to.in_(ids), models.Email.bounce==True)).count()
@@ -686,24 +686,26 @@ def emailStats():
 @application.route('/validate',methods=['GET'])
 def validate():
 	e = request.args['email'].strip().lower()
-	host, domain = e.split('@')
-	already_there = modules.getModel(models.EmailAddress, address = e)
-	if already_there:
-		print "returning what is there"
-		return jsonify(catch_all = already_there.domain.catch_all, is_deliverable=already_there.status)
-	already_there = modules.getModel(models.Domain, text=domain)
-	if already_there and already_there.catch_all:
-		print "returning what is there for domain being a catchall "
-		return jsonify(catch_all = already_there.catch_all, is_deliverable='Valid')
+	# host, domain = e.split('@')
+	# already_there = modules.getModel(models.EmailAddress, address = e)
+	# if already_there:
+	# 	print "returning what is there"
+	# 	return jsonify(catch_all = already_there.domain.catch_all, is_deliverable=already_there.status)
+	# already_there = modules.getModel(models.Domain, text=domain)
+	# if already_there and already_there.catch_all:
+	# 	print "returning what is there for domain being a catchall "
+	# 	return jsonify(catch_all = already_there.catch_all, is_deliverable='Valid')
 	t =  validate_email.validate(e)
 	print t
-	dom, dom_created = modules.get_or_create(models.Domain, text = domain, defaults = {'catch_all':t.get('catch_all', False), 'valid': "no MX record found" != t.get('reason', '')})
-	modules.get_or_create(models.EmailAddress, address = e, defaults = {'domain_id':dom.id, 'status':t.get('is_deliverable', 'Unknown')})
+	# dom, dom_created = modules.get_or_create(models.Domain, text = domain, defaults = {'catch_all':t.get('catch_all', False), 'valid': "no MX record found" != t.get('reason', '')})
+	# modules.get_or_create(models.EmailAddress, address = e, defaults = {'domain_id':dom.id, 'status':t.get('is_deliverable', 'Unknown')})
 	return jsonify(**t)
 
 @application.route('/check',methods=['GET'])
 def check():
-	return None
+	access_token = modles.appGoogleAPI(modules.getModel(models.App, appid="aaDKE34H8TD"))
+	print googleAPI.archiveThread(access_token, "15233f47c4022174")
+	return jsonify()
 
 	
 
@@ -723,7 +725,6 @@ class Scheduler(object):
 			raise Exception("this timer is already running")
 	def _run(self):
 		self.function()
-		print self.name, "run"
 		self._t = Timer(self.sleep_time, self._run)
 		self._t.start()
 	def stop(self):

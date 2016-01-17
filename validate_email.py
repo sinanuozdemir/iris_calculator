@@ -33,52 +33,55 @@ def domainIsCatchAll(domain):
 	return validate('blehblehblehbleh@'+domain).get('is_deliverable') == 'Valid'
 
 
-def validate(addressToVerify):
-	match = re.match('^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$', addressToVerify)
-	handle, domain = addressToVerify.split('@')
-	if match == None:
-		print 'Bad Syntax'
-		raise ValueError('Bad Syntax')
-
-	
-	try:
-		records = dns.resolver.query(domain, 'MX')
-		mxRecord = records[0].exchange
-		mxRecord = str(mxRecord)
-		# mxRecord = getHost(domain)
-	except:
-		return {'status':'failed', 'reason': 'no MX record found'}
-	print mxRecord, "mx ercord"
-	if mxRecord is None:
-		return {'status':'failed', 'reason': 'no MX record found'}
-
-	if handle != 'blehblehblehbleh' and domainIsCatchAll(domain):
-		return {'status':'success', 'is_deliverable':'Valid', 'catch_all':True}
-	# Get local server hostname
+def _validateOnRecord(e, rec):
 	host = socket.gethostname()
 	# SMTP lib setup (use debug level for full output)
-	server = smtplib.SMTP()
+	server = smtplib.SMTP(timeout=10)
 	server.set_debuglevel(0)
-
 	# SMTP Conversation
-	server.connect(mxRecord)
+	server.connect(rec)
 	time.sleep(random.choice(range(3)))
 	server.helo(host)
 	time.sleep(random.choice(range(3)))
 	server.mail(addressToVerify)
 	time.sleep(random.choice(range(3)))
-	code, message = server.rcpt(str(addressToVerify))
+	code, message = server.rcpt(str(e))
 	time.sleep(random.choice(range(3)))
 	server.quit()
 	print code, message
 	# Assume 250 as Success
 	if code == 250:
-		i = 'Valid'
+		return 'Valid'
 	else:
-		i = 'Invalid'
+		return 'Invalid'
+
+
+def validate(addressToVerify):
+	addressToVerify = addressToVerify.strip().lower()
+	match = re.match('^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$', addressToVerify)
+	handle, domain = addressToVerify.split('@')
+	if match == None:
+		print 'Bad Syntax'
+		raise ValueError('Bad Syntax')
+	try:
+		records = dns.resolver.query(domain, 'MX')
+		mxRecord = records[0].exchange
+		mxRecord = str(mxRecord)
+	except:
+		return {'status':'failed', 'reason': 'no MX record found'}
+	if mxRecord is None:
+		return {'status':'failed', 'reason': 'no MX record found'}
+	print mxRecord
+	for record in records:
+		try:
+			i = _validateOnRecord(addressToVerify, record.exchange)
+		except Exception as ee:
+			print ee
+			i = None
+		print record.exchange, i
 	to_return = {'status':'success', 'is_deliverable':i}
-	if handle != 'blehblehblehbleh':
-		to_return['catch_all'] = domainIsCatchAll(domain)
+
+
 	return to_return
 
 

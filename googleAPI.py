@@ -72,7 +72,7 @@ def MakeshiftSentiment(text):
 	return score
 
 
-def cleanMessage(m):
+def cleanMessage(access_token, m):
 	new_m = {}
 	new_m['google_message_id'] = m.get('id')
 	new_m['google_thread_id'] = m.get('threadId')
@@ -102,8 +102,32 @@ def cleanMessage(m):
 		new_m['makeshift_sentiment'] = MakeshiftSentiment(new_m.get('text'))
 	new_m['emailid'] = 'ee'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(9))
 	new_m['bounce'] = detectBouncedEmailFromMessage(m) is not None
+	if new_m['bounce']: #archive bounces
+		try:
+			archiveThread(access_token, new_m['google_thread_id'])
+		except Exception as archive_error:
+			print archive_error, "archive_error"
 	new_m['bounced_email'] = detectBouncedEmailFromMessage(m)
 	return {k:v for k, v in new_m.iteritems() if v is not None and v != '' and v != []}
+
+def archiveThread(access_token, threadId):
+	url = 'https://www.googleapis.com/gmail/v1/users/me/threads/'+threadId+'/modify'
+	headers = {}
+	headers['content-type'] = 'application/json'
+	headers['authorization'] = 'Bearer ' + access_token
+	data = {}
+	data['removeLabelIds']=['INBOX', "UNREAD"]
+	data = json.dumps(data)
+	message = requests.post(url, headers = headers, data = data).json()
+	return message
+
+
+def getLabels(access_token):
+	url = 'https://www.googleapis.com/gmail/v1/users/me/labels'
+	headers = {}
+	headers['authorization'] = 'Bearer ' + access_token
+	print requests.get(url, headers = headers).json()
+
 
 def getThreadMessages(threadId, access_token):
 	url = 'https://www.googleapis.com/gmail/v1/users/me/threads/'+threadId

@@ -18,14 +18,14 @@ def appGoogleAPI(app):
 def checkForReplies(thread, access_token, from_ = 'google'):
 	if from_ == 'google':
 		for message in googleAPI.getThreadMessages(thread.unique_thread_id, access_token):
-			g = googleAPI.cleanMessage(message)
+			g = googleAPI.cleanMessage(access_token, message)
 			g['thread_id'] = thread.id
 			g['replied_to'] = thread.emails[-1].id
 			modules.get_or_create(models.Email, google_message_id=g['google_message_id'], defaults = g)
 
 def getThreadsOfApp(app, from_ = 'google'):
 	threads = app.threads
-	ids = [(t, len(t.emails)) for t in threads if t.origin == from_ and t.first_made > (datetime.now()-timedelta(days=60)) and (t.last_checked is None or t.last_checked <(datetime.now() - timedelta(hours=1)))]
+	ids = [(t, len(t.emails)) for t in threads if t.origin == from_ and t.first_made > (datetime.now()-timedelta(days=60)) and (t.last_checked is None or t.last_checked <(datetime.now() - timedelta(minutes=5)))]
 	return ids
 
 
