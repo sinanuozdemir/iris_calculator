@@ -47,7 +47,7 @@ def validate(addressToVerify):
 		mxRecord = str(mxRecord)
 		# mxRecord = getHost(domain)
 	except:
-		return None
+		return {'status':'failed', 'reason': 'no MX record found'}
 	print mxRecord, "mx ercord"
 	if mxRecord is None:
 		return {'status':'failed', 'reason': 'no MX record found'}

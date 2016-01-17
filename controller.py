@@ -698,7 +698,7 @@ def validate():
 	t =  validate_email.validate(e)
 	print t
 	dom, dom_created = modules.get_or_create(models.Domain, text = domain, defaults = {'catch_all':t.get('catch_all', False), 'valid': "no MX record found" != t.get('reason', '')})
-	modules.get_or_create(models.EmailAddress, address = e, defaults = {'domain_id':dom.id, 'status':t['is_deliverable']})
+	modules.get_or_create(models.EmailAddress, address = e, defaults = {'domain_id':dom.id, 'status':t.get('is_deliverable', 'Unknown')})
 	return jsonify(**t)
 
 @application.route('/check',methods=['GET'])
