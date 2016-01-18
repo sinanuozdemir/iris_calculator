@@ -18,3 +18,5 @@ Flask-Mail==0.9.1
 python-dateutil==2.4.2
 textblob==0.8.4
 dnspython==1.12.0
+celery==3.1.19
+boto==2.38.0
