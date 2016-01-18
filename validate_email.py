@@ -6,6 +6,7 @@ import re
 import socket
 import smtplib
 import dns.resolver
+import celery
 
 # get domain host from 'nslookup'
 def getHost(domain) :
@@ -55,7 +56,7 @@ def _validateOnRecord(e, rec):
 	else:
 		return 'Invalid'
 
-
+@celery.task(queue='latacking', name="validate_email")
 def validate(addressToVerify):
 	addressToVerify = addressToVerify.strip().lower()
 	match = re.match('^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$', addressToVerify)
