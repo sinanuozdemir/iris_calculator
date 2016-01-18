@@ -73,16 +73,13 @@ def validate(addressToVerify):
 	if mxRecord is None:
 		return {'status':'failed', 'reason': 'no MX record found'}
 	print mxRecord
-	for record in records:
-		try:
-			i = _validateOnRecord(addressToVerify, record.exchange)
-		except Exception as ee:
-			print ee
-			i = None
-		print record.exchange, i
-		if i:
-			return {'status':'success', 'is_deliverable':i}
-	to_return = {'status':'success', 'is_deliverable':i}
-	return to_return
+	try:
+		i = _validateOnRecord(addressToVerify, mxRecord)
+		s = 'success'
+	except Exception as ee:
+		print ee
+		i = 'Unknown'
+		s = 'failed'
+	return {'status':s, 'is_deliverable':i}
 
 
