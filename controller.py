@@ -737,7 +737,7 @@ def validateThisEmail(e):
 
 @application.route('/check',methods=['GET'])
 def check():
-	validateThisEmail.apply_async(("asdasdasd@built.io",))
+	validateThisEmail.apply_async((request.args['email'],))
 	# access_token = modles.appGoogleAPI(modules.getModel(models.App, appid="aaDKE34H8TD"))
 	# print googleAPI.archiveThread(access_token, "15233f47c4022174")
 	return jsonify()
