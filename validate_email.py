@@ -80,6 +80,8 @@ def validate(addressToVerify):
 			print ee
 			i = None
 		print record.exchange, i
+		if i:
+			break
 	to_return = {'status':'success', 'is_deliverable':i}
 
 
