@@ -36,30 +36,7 @@ from random import randint
 import json
 from datetime import datetime
 from collections import Counter
-from celery import Celery
 
-
-
-def make_celery(app):
-	celery = Celery(app.import_name, broker=app.config['CELERY_BROKER_URL'])
-	celery.conf.update(app.config)
-	TaskBase = celery.Task
-	class ContextTask(TaskBase):
-		abstract = True
-		def __call__(self, *args, **kwargs):
-			with app.app_context():
-				return TaskBase.__call__(self, *args, **kwargs)
-	celery.Task = ContextTask
-	return celery
-celery = make_celery(application)
-
-
-@celery.task(queue="latracking", name="addasasd")
-def add():
-	p = models.Domain()
-	db.session.add(p)
-	db.session.commit()
-	
 
 
 website_re = re.compile("(https?://)?(www.)?([^\.]+)([\.\w]+)/?((\w+/?)*(\?[\w=]+)?)", re.IGNORECASE)
@@ -699,45 +676,9 @@ def emailStats():
 	return jsonify(bounce_rate=round(bounces/num_emails, 2), open_rate=round(opens/num_emails, 2), click_rate=round(clicks/num_emails, 2), reply_rate=round(replies/num_emails, 2))
 
 
-@application.route('/validate',methods=['GET'])
-def validate():
-	e = request.args['email'].strip().lower()
-	host, domain = e.split('@')
-	already_there = modules.getModel(models.EmailAddress, address = e)
-	if already_there:
-		print "returning what is there"
-		return jsonify(catch_all = already_there.domain.catch_all, is_deliverable=already_there.status)
-	already_there = modules.getModel(models.Domain, text=domain)
-	if already_there and already_there.catch_all:
-		print "returning what is there for domain being a catchall "
-		return jsonify(catch_all = already_there.catch_all, is_deliverable='Valid')
-	t =  validate_email.validate(e)
-	print t
-	dom, dom_created = modules.get_or_create(models.Domain, text = domain, defaults = {'catch_all':t.get('catch_all', False), 'valid': "no MX record found" != t.get('reason', '')})
-	modules.get_or_create(models.EmailAddress, address = e, defaults = {'domain_id':dom.id, 'status':t.get('is_deliverable', 'Unknown')})
-	return jsonify(**t)
-
-@celery.task(queue="latracking", name="validatethismeail")
-def validateThisEmail(e):
-	e = e.strip().lower()
-	host, domain = e.split('@')
-	already_there = modules.getModel(models.EmailAddress, address = e)
-	if already_there:
-		print "returning what is there"
-		return {'catch_all': already_there.domain.catch_all, 'is_deliverable':already_there.status}
-	already_there = modules.getModel(models.Domain, text=domain)
-	if already_there and already_there.catch_all:
-		print "returning what is there for domain being a catchall "
-		return {'catch_all': already_there.catch_all, 'is_deliverable':'Valid'}
-	t =  validate_email.validate(e)
-	print t
-	dom, dom_created = modules.get_or_create(models.Domain, text = domain, defaults = {'catch_all':t.get('catch_all', False), 'valid': "no MX record found" != t.get('reason', '')})
-	modules.get_or_create(models.EmailAddress, address = e, defaults = {'domain_id':dom.id, 'status':t.get('is_deliverable', 'Unknown')})
-	return t
 
 @application.route('/check',methods=['GET'])
 def check():
-	validateThisEmail.apply_async((request.args['email'],))
 	# access_token = modles.appGoogleAPI(modules.getModel(models.App, appid="aaDKE34H8TD"))
 	# print googleAPI.archiveThread(access_token, "15233f47c4022174")
 	return jsonify()
@@ -769,7 +710,7 @@ class Scheduler(object):
 
 
 application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
-DEBUG = True
+DEBUG = False
 
 if not DEBUG:
 	@application.before_first_request
