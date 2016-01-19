@@ -1,5 +1,4 @@
 # coding: utf-8
-import validate_email
 import googleAPI
 import requests
 from sqlalchemy import and_
