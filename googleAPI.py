@@ -150,7 +150,7 @@ def refreshAccessToken(access, refresh):
 	return access
 
 
-#ADDDDD send as part of a thread
+
 def sendEmail(email, access_token, to_address, text = '', subject = '', bcc_address = None, html = '', threadID = None):
 	url = 'https://www.googleapis.com/gmail/v1/users/me/messages/send'
 	headers = {}

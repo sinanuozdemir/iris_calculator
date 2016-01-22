@@ -471,6 +471,8 @@ def sendEmail():
 	if not app or not app.user.is_verified:
 		return jsonify(success=False, reason='app not there or user not verified')
 	html = request.form.get('html', '')
+	#ADDDD checkf if the exact same message has been sent before, if so, don't do it
+	# if db.session.query(models.Email).filter_by()
 	if html:
 		links = []
 		soup = bs(html)

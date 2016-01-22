@@ -53,8 +53,11 @@ def handleApp(appid = None):
 
 def handleRandomApp():
 	print "attempting to handle a random app"
-	u = random.sample(db.session.query(models.App.appid).all(), 1)[0][0]
-	handleApp(u)
+	try:
+		u = random.sample(db.session.query(models.App.appid).all(), 1)[0][0]
+		handleApp(u)
+	except Exception as random_eror:
+		print random_eror, "ERROR AT HANDLE RANDOM APP"
 	return True
 
 
