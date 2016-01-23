@@ -40,7 +40,11 @@ def handleApp(appid = None):
 		print "looking for replies to thread %s which currently has %d messages in it" % thread
 		thread[0].last_checked = datetime.now()
 		db.session.commit()
-		checkForReplies(thread[0], access_token, from_ = 'google')
+		try:
+			checkForReplies(thread[0], access_token, from_ = 'google')
+		except Exception as eeeee:
+			print eeeee, "error at checkforreplies"
+			continue
 		thread[0].last_checked = datetime.now()
 		tos, froms = [], []
 		for t, f in [(t.to_address, t.from_address) for t in thread[0].emails]:
