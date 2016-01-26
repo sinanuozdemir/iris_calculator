@@ -715,13 +715,13 @@ def cadenceInfo():
 	# print most_recent_replies, most_recent_opens, most_recent_clicks
 	
 
-	stats = {}
+	stats = {'dates': {}}
 	for day in modules.date_range(datetime.today()-timedelta(days=7), datetime.today()):
 		_day = datetime.strftime(day, '%m/%d/%Y')
 		if _day not in dates: 
-			stats[_day] = {'sent':0, 'opens':0, 'replies':0, 'clicks':0}
+			stats['dates'][_day] = {'sent':0, 'opens':0, 'replies':0, 'clicks':0}
 			continue
-		stats[_day] = {
+		stats['dates'][_day] = {
 			'sent':len(dates[_day]), 
 			'opens':sum([all_opens.get(a, 0) for a in dates[_day]]), 
 			'replies':sum([all_replies.get(a, 0) for a in dates[_day]]), 
