@@ -399,7 +399,6 @@ def makeNewUser():
 # gets appd for a given email, if it doesn't exist, itll make one
 def getAppIDForEmail(email, app_dict = {}):
 	u, t = modules.get_or_create(models.User, email=email, defaults={'is_verified':True})
-	print u.id
 	apps = db.session.query(models.App).filter_by(user = u).all()
 	if len(apps):
 		return apps[0].appid
@@ -409,7 +408,6 @@ def getAppIDForEmail(email, app_dict = {}):
 def setItDown():
 	a = session['appid']
 	out = jsonify(appid=a)
-	print a
 	out.set_cookie('LATrackingID', value=a, max_age=None, expires=datetime.now()+timedelta(days=365))
 	return out
 	
@@ -562,7 +560,6 @@ def cleanLink(e):
 
 def _getStatsOnGoogleThread(threadId):
 	thread = modules.getModel(models.Thread, unique_thread_id=threadId)
-	print thread.id
 	messages_in_thread = thread.emails
 	num_messages = len(messages_in_thread)
 	from_addresses = list(set([e.from_address for e in messages_in_thread if e.from_address]))
@@ -590,7 +587,6 @@ def getInfoOnEmail():
 	a = a.id
 	email = modules.getModel(models.Email, emailid = email_id)
 	to_return = {}
-	print email.google_message_id
 	if email.google_message_id: #is a google message
 		to_return['thread'] =  _getStatsOnGoogleThread(email.thread.unique_thread_id)
 	return jsonify(success=True, threads = to_return)
@@ -662,18 +658,6 @@ def emailStats():
 	emails = db.session.query(models.Email).filter(models.Email.emailid.in_(emailids)).all()
 	ids = [e.id for e in emails]
 	num_emails = float(len(ids))
-	# all_opens = db.session.query(models.Visit).filter(models.Visit.email_id.in_(ids)).all()
-	# all_opens = [{'date':a.date, 'type':'open', 'email_id':a.email_id} for a in all_opens]
-	# all_links = db.session.query(models.Link).filter(models.Link.email_id.in_(ids)).all()
-	# link_ids = [l.id for l in all_links]
-	# all_clicks = db.session.query(models.Visit).filter(models.Visit.link_id.in_(link_ids)).all()
-	# all_clicks = [{'date':a.date, 'type':'click', 'email_id':a.email_id} for a in all_clicks]
-	# # print all_opens, all_links, all_clicks
-
-	# distinct_opens = len(set((o['email_id'] for o in all_opens)))
-	# distinct_clicks = len(set((o['email_id'] for o in all_clicks)))
-	# print distinct_clicks, distinct_opens
-
 	opens = sum([len([r for r in e.opens if r.app_id != a]) > 0 for e in emails])
 	bounces = db.session.query(models.Email).filter(and_(models.Email.replied_to.in_(ids), models.Email.bounce==True)).count()
 	replies = db.session.query(models.Email).filter(and_(models.Email.replied_to.in_(ids), models.Email.bounce==False)).count()
@@ -713,7 +697,6 @@ def cadenceInfo():
 	all_replies = db.session.query(models.Email).filter(and_(models.Email.replied_to.in_(ids), models.Email.bounce==False))
 	most_recent_replies = [('reply', s.from_address, ((now-s.date_sent).seconds), ((now-s.date_sent).seconds/60), ((now-s.date_sent).seconds/3600), s.subject) for s in sorted(all_replies, key = lambda x:x.date_sent)[-10:]][::-1]
 	all_replies = {e.replied_to:1 for e in all_replies}
-	# print most_recent_replies, most_recent_opens, most_recent_clicks
 	
 
 	stats = {'dates': {}}
@@ -728,7 +711,7 @@ def cadenceInfo():
 			'replies':sum([all_replies.get(a, 0) for a in dates[_day]]), 
 			'clicks':sum([all_clicks.get(a, 0) for a in dates[_day]]),
 		}
-	stats['dates'] = {x:stats['dates'][x] for x in sorted(stats['dates'])}
+	stats['dates'] = [(x, stats['dates'][x]) for x in sorted(stats['dates'])]
 	stats['most_recent_replies'] = most_recent_replies
 	stats['most_recent_clicks'] = most_recent_clicks
 	stats['most_recent_opens'] = most_recent_opens
