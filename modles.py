@@ -25,7 +25,8 @@ def checkForReplies(thread, access_token, from_ = 'google'):
 
 def getThreadsOfApp(app, from_ = 'google'):
 	threads = app.threads
-	ids = [(t, len(t.emails)) for t in threads if t.origin == from_ and t.first_made > (datetime.now()-timedelta(days=60)) and (t.last_checked is None or t.last_checked <(datetime.now() - timedelta(minutes=5)))]
+	ids = [t for t in threads if t.origin == from_ and t.first_made > (datetime.now()-timedelta(days=60)) and (t.last_checked is None or t.last_checked <(datetime.now() - timedelta(minutes=5)))]
+	# ids = [t for t in threads[:1000] if t.origin == from_ and t.first_made > (datetime.now()-timedelta(days=1))]
 	return ids
 
 
@@ -35,23 +36,24 @@ def handleApp(appid = None):
 	print "checking app %s" %(appid)
 	a = db.session.query(models.App).filter_by(appid=appid).first()
 	access_token = appGoogleAPI(a)
+	print access_token
 	threads = getThreadsOfApp(a)
 	for thread in threads:
-		print "looking for replies to thread %s which currently has %d messages in it" % thread
-		thread[0].last_checked = datetime.now()
+		print "looking for replies to thread %s " % thread
+		thread.last_checked = datetime.now()
 		db.session.commit()
 		try:
-			checkForReplies(thread[0], access_token, from_ = 'google')
+			checkForReplies(thread, access_token, from_ = 'google')
 		except Exception as eeeee:
 			print eeeee, "error at checkforreplies"
 			continue
-		thread[0].last_checked = datetime.now()
+		thread.last_checked = datetime.now()
 		tos, froms = [], []
-		for t, f in [(t.to_address, t.from_address) for t in thread[0].emails]:
+		for t, f in [(t.to_address, t.from_address) for t in thread.emails]:
 			tos += [a.lower() for a in t.split(',')]
 			froms += [a.lower() for a in f.split(',')]
-		thread[0].people_in_conversation = len(set(tos) | set(froms))
-		thread[0].all_parties_replied = len(set(tos) | set(froms)) == len(set(tos) & set(froms))
+		thread.people_in_conversation = len(set(tos) | set(froms))
+		thread.all_parties_replied = len(set(tos) | set(froms)) == len(set(tos) & set(froms))
 		db.session.commit()
 	return {'status':'done', 'appid':appid}
 

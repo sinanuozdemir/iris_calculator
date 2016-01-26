@@ -1,3 +1,4 @@
+import datetime
 from controller import db
 import models
 
@@ -17,4 +18,11 @@ def get_or_create(model, **kwargs):
 		db.session.add(instance)
 		db.session.commit()
 		return instance, True
+
+def date_range(b, e, by = 'day'):
+	if by == 'day':
+		while b <= e:
+			yield b
+			b += datetime.timedelta(days=1)
+			
 

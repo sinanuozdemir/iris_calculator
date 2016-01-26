@@ -681,9 +681,63 @@ def emailStats():
 	return jsonify(bounce_rate=round(bounces/num_emails, 2), open_rate=round(opens/num_emails, 2), click_rate=round(clicks/num_emails, 2), reply_rate=round(replies/num_emails, 2))
 
 
+@application.route('/cadenceInfo',methods=['POST'])
+def cadenceInfo():
+	emailids = [a.strip() for a in request.form.get('emailids').split(',')]
+	try:
+		a = modules.getModel(models.App, appid=request.form.get('appid')).id
+	except:
+		return jsonify(fuck="off")
+	dates = {}
+	emails = db.session.query(models.Email).filter(models.Email.emailid.in_(emailids)).all()
+	emails = [(e.id, e.date_sent) for e in emails if e.id and e.date_sent]
+	for e in emails:
+		date_formatted = datetime.strftime(e[1], '%m/%d/%Y')
+		if date_formatted not in dates: dates[date_formatted] = []
+		dates[date_formatted].append(e[0])
+	ids = [a[0] for a in emails]
+	num_emails = float(len(ids))
+	all_opens = db.session.query(models.Visit).filter(models.Visit.email_id.in_(ids)).all()
+	most_recent_opens = [(s.email.to_address, datetime.strftime(s.date, '%m/%d/%Y'), s.email.subject) for s in sorted(all_opens, key = lambda x:x.date)[-10:]]
+	all_opens = {a.email_id:1 for a in all_opens}
+	
+
+	all_links = db.session.query(models.Link).filter(models.Link.email_id.in_(ids)).all()
+	link_ids = [l.id for l in all_links]
+	all_clicks = db.session.query(models.Visit).filter(models.Visit.link_id.in_(link_ids)).all()
+	most_recent_clicks = [(s.link.email.to_address, datetime.strftime(s.date, '%m/%d/%Y'), s.link.email.subject) for s in sorted(all_clicks, key = lambda x:x.date)[-10:]]
+	all_clicks = {a.link.email_id:1 for a in all_clicks}
+	
+
+	all_replies = db.session.query(models.Email).filter(and_(models.Email.replied_to.in_(ids), models.Email.bounce==False))
+	most_recent_replies = [(s.from_address, datetime.strftime(s.date_sent, '%m/%d/%Y'), s.subject) for s in sorted(all_replies, key = lambda x:x.date_sent)[-10:]]
+	all_replies = {e.replied_to:1 for e in all_replies}
+	# print most_recent_replies, most_recent_opens, most_recent_clicks
+	
+
+	stats = {}
+	for day in modules.date_range(datetime.today()-timedelta(days=7), datetime.today()):
+		_day = datetime.strftime(day, '%m/%d/%Y')
+		if _day not in dates: 
+			stats[_day] = {'sent':0, 'opens':0, 'replies':0, 'clicks':0}
+			continue
+		stats[_day] = {
+			'sent':len(dates[_day]), 
+			'opens':sum([all_opens.get(a, 0) for a in dates[_day]]), 
+			'replies':sum([all_replies.get(a, 0) for a in dates[_day]]), 
+			'clicks':sum([all_clicks.get(a, 0) for a in dates[_day]]),
+		}
+	stats['most_recent_replies'] = most_recent_replies
+	stats['most_recent_clicks'] = most_recent_clicks
+	stats['most_recent_opens'] = most_recent_opens
+
+	return jsonify(stats)
+
+
 
 @application.route('/check',methods=['GET'])
 def check():
+	modles.handleApp('aaQKNO9G7WS')
 	# access_token = modles.appGoogleAPI(modules.getModel(models.App, appid="aaDKE34H8TD"))
 	# print googleAPI.archiveThread(access_token, "15233f47c4022174")
 	return jsonify()

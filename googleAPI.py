@@ -31,11 +31,44 @@ def goodGoogleAuth(token):
 	except:
 		return False
 
-def detectBouncedEmailFromMessage(message):
+def getEmailFromText(t):
+	try:
+		return re.search(SIMPLE_EMAIL_REGEX, t).group(1)
+	except:
+		return None
+
+
+def detectBouncedEmailFromMessage(snippet, subject):
 	SIMPLE_EMAIL_REGEX = '(([a-zA-Z0-9][\w\.-]+)@([a-z-_A-Z0-9\.]+)\.(\w\w\w?))'
-	snippet = message['snippet']
-	if 'delivery' in snippet.lower() and 'failed' in snippet.lower():
-		return re.search(SIMPLE_EMAIL_REGEX, snippet).group(1)
+
+	snippet = snippet.lower()
+	subject = subject.lower()
+
+	if 'delivery' in snippet and 'failed' in snippet:
+		try:
+			return re.search(SIMPLE_EMAIL_REGEX, snippet).group(1)
+		except:
+			return 'unknown'
+	elif 'failure notice' in subject:
+		try:
+			return re.search(SIMPLE_EMAIL_REGEX, snippet).group(1)
+		except:
+			return 'unknown'
+	if 'delivery' in snippet and 'delay' in snippet:
+		try:
+			return re.search(SIMPLE_EMAIL_REGEX, snippet).group(1)
+		except:
+			return 'unknown'
+	elif 'undelivered mail' in snippet or 'undelivered mail' in subject:
+		try:
+			return re.search(SIMPLE_EMAIL_REGEX, snippet).group(1)
+		except:
+			return 'unknown'
+	elif 'undeliverable' in snippet or 'undeliverable' in subject:
+		try:
+			return re.search(SIMPLE_EMAIL_REGEX, subject).group(1)
+		except:
+			return 'unknown'
 	return None
 
 def getGoogleAccessToken(refresh_token):
@@ -51,13 +84,6 @@ def getGoogleAccessToken(refresh_token):
 	except:
 		return None
 
-def getEmailFromText(t):
-	try:
-		return re.search(SIMPLE_EMAIL_REGEX, t).group(1)
-	except:
-		return None
-
-
 def MakeshiftSentiment(text):
 	text = text.lower().strip()
 	negs = {'no':-3, 'no thank you':-1, 'remove me':-5, 'unsubscribe':-5}
@@ -70,7 +96,6 @@ def MakeshiftSentiment(text):
 		score += v*text.count(k)
 		text = re.sub(k, '', text)
 	return score
-
 
 def cleanMessage(access_token, m):
 	new_m = {}
@@ -101,13 +126,22 @@ def cleanMessage(access_token, m):
 	if new_m.get('text'):
 		new_m['makeshift_sentiment'] = MakeshiftSentiment(new_m.get('text'))
 	new_m['emailid'] = 'ee'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(9))
-	new_m['bounce'] = detectBouncedEmailFromMessage(m) is not None
+	if 'text' in new_m:
+		_bounce = detectBouncedEmailFromMessage(new_m.get('text', ''), new_m.get('subject', ''))
+	elif 'html' in new_m:
+		_bounce = detectBouncedEmailFromMessage(new_m.get('html', ''), new_m.get('subject', ''))
+	elif 'snippet' in m:
+		_bounce = detectBouncedEmailFromMessage(m.get('snippet', ''), new_m.get('subject', ''))
+	else:
+		_bounce = None
+	print _bounce, "_bounce"
+	new_m['bounce'] = _bounce is not None
 	if new_m['bounce']: #archive bounces
 		try:
 			archiveThread(access_token, new_m['google_thread_id'])
 		except Exception as archive_error:
 			print archive_error, "archive_error"
-	new_m['bounced_email'] = detectBouncedEmailFromMessage(m)
+	new_m['bounced_email'] = _bounce
 	return {k:v for k, v in new_m.iteritems() if v is not None and v != '' and v != []}
 
 def archiveThread(access_token, threadId):
@@ -134,6 +168,9 @@ def getThreadMessages(threadId, access_token):
 	headers = {}
 	headers['authorization'] = 'Bearer ' + access_token
 	messages = requests.get(url, headers = headers).json()['messages']
+	print messages
+	#ADDDD sort messages by ascending date
+	# messages = sorted(messages, key = lambda x:x['payload']['headers']['Date']['value'])
 	return messages
 
 def getMessage(messageId, access_token, att):
