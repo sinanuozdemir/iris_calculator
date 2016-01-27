@@ -650,18 +650,19 @@ def handleApp(i):
 
 @application.route('/emailStats',methods=['POST'])
 def emailStats():
-	emailids = request.form.get('emailids').split(',')
+	emailids = [a.strip() for a in request.form.get('emailids').split(',')]
 	try:
 		a = modules.getModel(models.App, appid=request.form.get('appid')).id
 	except:
 		return jsonify(fuck="off")
-	emails = db.session.query(models.Email).filter(models.Email.emailid.in_(emailids)).all()
-	ids = [e.id for e in emails]
+	ids = db.session.query(models.Email).with_entities(models.Email.id).filter(models.Email.emailid.in_(emailids)).all()
 	num_emails = float(len(ids))
-	opens = sum([len([r for r in e.opens if r.app_id != a]) > 0 for e in emails])
-	bounces = db.session.query(models.Email).filter(and_(models.Email.replied_to.in_(ids), models.Email.bounce==True)).count()
-	replies = db.session.query(models.Email).filter(and_(models.Email.replied_to.in_(ids), models.Email.bounce==False)).count()
-	clicks = sum([sum([len([r for r in l.opens if r.app_id != a]) for l in e.links])>0 for e in emails])
+	
+	opens = db.session.query(models.Visit).distinct(models.Visit.email_id).with_entities(models.Visit.id).filter(models.Visit.email_id.in_(ids)).count()
+	replies = db.session.query(models.Email).distinct(models.Email.replied_to).with_entities(models.Email.replied_to).filter(and_(models.Email.replied_to.in_(ids), models.Email.bounce==False)).count()
+	bounces = db.session.query(models.Email).distinct(models.Email.replied_to).with_entities(models.Email.replied_to).filter(and_(models.Email.replied_to.in_(ids), models.Email.bounce==True)).count()
+	all_links = db.session.query(models.Link).with_entities(models.Link.id).filter(models.Link.email_id.in_(ids)).all()
+	clicks = db.session.query(models.Visit).distinct(models.Visit.link_id).filter(models.Visit.link_id.in_(all_links)).count()
 	return jsonify(bounce_rate=round(bounces/num_emails, 2), open_rate=round(opens/num_emails, 2), click_rate=round(clicks/num_emails, 2), reply_rate=round(replies/num_emails, 2))
 
 
@@ -699,7 +700,6 @@ def cadenceInfo():
 	most_recent_replies = [('reply', s.from_address, ((utc_now-s.date_sent).seconds), ((utc_now-s.date_sent).seconds/60), ((utc_now-s.date_sent).seconds/3600), s.subject) for s in sorted(all_replies, key = lambda x:x.date_sent)[-10:]][::-1]
 	all_replies = {e.replied_to:1 for e in all_replies}
 	
-
 	stats = {'dates': {}}
 	for day in modules.date_range(now-timedelta(days=7), now):
 		_day = datetime.strftime(day, '%m/%d/%Y')
