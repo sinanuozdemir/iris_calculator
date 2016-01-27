@@ -673,7 +673,7 @@ def cadenceInfo():
 	except:
 		return jsonify(fuck="off")
 	dates = {}
-	now = datetime.utcnow()
+	now = datetime.utcnow()+timedelta(hours=int(request.form.get('offset', -8)))
 	emails = db.session.query(models.Email).filter(models.Email.emailid.in_(emailids)).all()
 	emails = [(e.id, e.date_sent) for e in emails if e.id and e.date_sent]
 	for e in emails:
@@ -700,7 +700,7 @@ def cadenceInfo():
 	
 
 	stats = {'dates': {}}
-	for day in modules.date_range(datetime.today()-timedelta(days=7), datetime.today()):
+	for day in modules.date_range(now-timedelta(days=7), now):
 		_day = datetime.strftime(day, '%m/%d/%Y')
 		if _day not in dates: 
 			stats['dates'][_day] = {'sent':0, 'opens':0, 'replies':0, 'clicks':0}
