@@ -97,7 +97,7 @@ def MakeshiftSentiment(text):
 		text = re.sub(k, '', text)
 	return score
 
-def cleanMessage(access_token, m):
+def cleanMessage(access_token, m, sent_through_latracking):
 	new_m = {}
 	new_m['google_message_id'] = m.get('id')
 	new_m['google_thread_id'] = m.get('threadId')
@@ -136,7 +136,7 @@ def cleanMessage(access_token, m):
 		_bounce = None
 	print _bounce, "_bounce"
 	new_m['bounce'] = _bounce is not None
-	if new_m['bounce']: #archive bounces
+	if new_m['bounce'] and sent_through_latracking: #archive bounces if it was sent through latracking
 		try:
 			archiveThread(access_token, new_m['google_thread_id'])
 		except Exception as archive_error:
@@ -156,22 +156,24 @@ def archiveThread(access_token, threadId):
 	return message
 
 
-def getLabels(access_token):
-	url = 'https://www.googleapis.com/gmail/v1/users/me/labels'
-	headers = {}
-	headers['authorization'] = 'Bearer ' + access_token
-	print requests.get(url, headers = headers).json()
-
-
 def getThreadMessages(threadId, access_token):
 	url = 'https://www.googleapis.com/gmail/v1/users/me/threads/'+threadId
 	headers = {}
 	headers['authorization'] = 'Bearer ' + access_token
 	messages = requests.get(url, headers = headers).json()['messages']
-	print messages
-	#ADDDD sort messages by ascending date
-	# messages = sorted(messages, key = lambda x:x['payload']['headers']['Date']['value'])
+	try:
+		messages = sorted(messages, key = lambda x:x['internalDate'])
+	except Exception as sorted_error:
+		print sorted_error, "sroteed_ererr"
 	return messages
+
+def getThreads(access_token):
+	url = 'https://www.googleapis.com/gmail/v1/users/me/threads/'
+	headers = {}
+	headers['authorization'] = 'Bearer ' + access_token
+	threads = requests.get(url, headers = headers).json()['threads']
+	return threads
+
 
 def getMessage(messageId, access_token, att):
 	url = 'https://www.googleapis.com/gmail/v1/users/me/messages/'+messageId

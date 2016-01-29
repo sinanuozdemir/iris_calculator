@@ -17,18 +17,28 @@ def appGoogleAPI(app):
 
 def checkForReplies(thread, access_token, from_ = 'google'):
 	if from_ == 'google':
-		for message in googleAPI.getThreadMessages(thread.unique_thread_id, access_token):
-			g = googleAPI.cleanMessage(access_token, message)
+		thread_emails = thread.emails
+		sent_through_latracking = len([a.app_id for a in thread_emails if a.app_id]) > 0
+		print sent_through_latracking, "sent_through_latracking"
+		messages = googleAPI.getThreadMessages(thread.unique_thread_id, access_token)
+		if len(messages) == len(thread_emails):
+			print "no new messages"
+			return
+		for message in messages:
+			g = googleAPI.cleanMessage(access_token, message, sent_through_latracking)
 			g['thread_id'] = thread.id
-			g['replied_to'] = thread.emails[-1].id
+			if len(thread.emails) > 0:
+				g['replied_to'] = sorted(thread.emails, key = lambda x: x.date_sent)[-1].id
 			modules.get_or_create(models.Email, google_message_id=g['google_message_id'], defaults = g)
 
-def getThreadsOfApp(app, from_ = 'google'):
-	threads = app.threads
-	ids = [t for t in threads if t.origin == from_ and t.first_made > (datetime.now()-timedelta(days=60)) and (t.last_checked is None or t.last_checked <(datetime.now() - timedelta(minutes=5)))]
-	# ids = [t for t in threads[:1000] if t.origin == from_ and t.first_made > (datetime.now()-timedelta(days=1))]
-	return ids
 
+	a = db.session.query(models.App).filter_by(appid=appid).first()
+	access_token = modles.appGoogleAPI(a)
+	threads = googleAPI.getThreads(access_token)
+	for thread in threads:
+		print thread
+		t, t_c = modules.get_or_create(models.Thread, unique_thread_id=thread['id'])
+		checkForReplies(t, access_token)
 
 #ADDDD eventually need to see if its an outlook or google thread
 def handleApp(appid = None):
@@ -36,24 +46,22 @@ def handleApp(appid = None):
 	print "checking app %s" %(appid)
 	a = db.session.query(models.App).filter_by(appid=appid).first()
 	access_token = appGoogleAPI(a)
-	print access_token
-	threads = getThreadsOfApp(a)
+	threads = googleAPI.getThreads(access_token)
 	for thread in threads:
 		print "looking for replies to thread %s " % thread
-		thread.last_checked = datetime.now()
-		db.session.commit()
+		_thread, t_c = modules.get_or_create(models.Thread, unique_thread_id=thread['id'])
 		try:
-			checkForReplies(thread, access_token, from_ = 'google')
-		except Exception as eeeee:
-			print eeeee, "error at checkforreplies"
-			continue
-		thread.last_checked = datetime.now()
+			checkForReplies(_thread, access_token)
+			print "CHECKED"
+		except Exception as ee:
+			print ee, "handle check for replies error"
+		_thread.last_checked = datetime.now()
 		tos, froms = [], []
-		for t, f in [(t.to_address, t.from_address) for t in thread.emails]:
+		for t, f in [(t.to_address, t.from_address) for t in _thread.emails]:
 			tos += [a.lower() for a in t.split(',')]
 			froms += [a.lower() for a in f.split(',')]
-		thread.people_in_conversation = len(set(tos) | set(froms))
-		thread.all_parties_replied = len(set(tos) | set(froms)) == len(set(tos) & set(froms))
+		_thread.people_in_conversation = len(set(tos) | set(froms))
+		_thread.all_parties_replied = len(set(tos) | set(froms)) == len(set(tos) & set(froms))
 		db.session.commit()
 	return {'status':'done', 'appid':appid}
 
