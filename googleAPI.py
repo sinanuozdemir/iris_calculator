@@ -54,9 +54,14 @@ def detectBouncedEmailFromMessage(snippet, subject):
 			return re.search(SIMPLE_EMAIL_REGEX, snippet).group(1)
 		except:
 			return 'unknown'
-	if 'delivery' in snippet and 'delay' in snippet:
+	elif 'delivery' in snippet and 'delay' in snippet:
 		try:
 			return re.search(SIMPLE_EMAIL_REGEX, snippet).group(1)
+		except:
+			return 'unknown'
+	elif 'delivery' in subject and 'delay' in subject:
+		try:
+			return re.search(SIMPLE_EMAIL_REGEX, subject).group(1)
 		except:
 			return 'unknown'
 	elif 'undelivered mail' in snippet or 'undelivered mail' in subject:
