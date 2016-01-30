@@ -723,8 +723,9 @@ def cadenceInfo():
 
 @application.route('/check',methods=['GET'])
 def check():
-	modles.handleApp('aaQKNO9G7WS')
-	
+	modles.handleRandomApp()
+
+	# modles.handleApp('aa5YZ3KU4BV')	
 	# access_token = modles.appGoogleAPI(modules.getModel(models.App, appid="aaDKE34H8TD"))
 	# print googleAPI.archiveThread(access_token, "15233f47c4022174")
 	return jsonify()
@@ -756,12 +757,12 @@ class Scheduler(object):
 
 
 application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
-DEBUG = True
+DEBUG = False
 
 if not DEBUG:
 	@application.before_first_request
 	def startScheduler():
-		scheduler = Scheduler(10, modles.handleRandomApp)
+		scheduler = Scheduler(30, modles.handleRandomApp)
 		scheduler.start()
 
 
