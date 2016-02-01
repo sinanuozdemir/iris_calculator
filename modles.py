@@ -29,9 +29,20 @@ def checkForReplies(thread, access_token, from_ = 'google'):
 				g = googleAPI.cleanMessage(access_token, message, sent_through_latracking)
 			except Exception as clean_error:
 				print clean_error, "clean_error"
-			g['thread_id'] = thread.id
+			g['thread_id'] = thread.id	
 			if len(thread.emails) > 0:
 				g['replied_to'] = sorted(thread.emails, key = lambda x: x.date_sent)[-1].id
+			elif g['auto_reply']:
+				print "IS AN AUTOREPLY"
+				email = None
+				try:
+					email = sorted(db.session.query(models.Email).filter_by(from_address=g['to_address'], to_address=g['from_address']).all(), key=lambda x:x.date_sent)[-1]
+				except Exception as autoreply_error:
+					print autoreply_error
+				print email
+				if email:
+					g['replied_to'] = email.id
+			if 'auto_reply' in g: del g['auto_reply']
 			modules.get_or_create(models.Email, google_message_id=g['google_message_id'], defaults = g)
 
 

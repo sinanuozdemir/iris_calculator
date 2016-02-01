@@ -37,6 +37,12 @@ def getEmailFromText(t):
 	except:
 		return None
 
+def detectAutoReply(subject):
+	subject = subject.lower()
+	if 'delayed response' in subject:
+		return True
+	return False
+
 
 def detectBouncedEmailFromMessage(snippet, subject):
 	SIMPLE_EMAIL_REGEX = '(([a-zA-Z0-9][\w\.-]+)@([a-z-_A-Z0-9\.]+)\.(\w\w\w?))'
@@ -146,6 +152,7 @@ def cleanMessage(access_token, m, sent_through_latracking):
 			archiveThread(access_token, new_m['google_thread_id'])
 		except Exception as archive_error:
 			print archive_error, "archive_error"
+	new_m['auto_reply'] = detectAutoReply(new_m.get('subject', ''))
 	new_m['bounced_email'] = _bounce
 	return {k:v for k, v in new_m.iteritems() if v is not None and v != '' and v != []}
 
