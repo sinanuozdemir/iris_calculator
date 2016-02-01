@@ -19,10 +19,10 @@ def checkForReplies(thread, access_token, from_ = 'google'):
 	if from_ == 'google':
 		thread_emails = thread.emails
 		sent_through_latracking = len([a.app_id for a in thread_emails if a.app_id]) > 0
-		print sent_through_latracking, "sent_through_latracking"
+		# print sent_through_latracking, "sent_through_latracking"
 		messages = googleAPI.getThreadMessages(thread.unique_thread_id, access_token)
 		if len(messages) == len(thread_emails):
-			print "no new messages"
+			# print "no new messages"
 			return
 		for message in messages:
 			try:
@@ -38,10 +38,20 @@ def checkForReplies(thread, access_token, from_ = 'google'):
 				try:
 					email = sorted(db.session.query(models.Email).filter_by(from_address=g['to_address'], to_address=g['from_address']).all(), key=lambda x:x.date_sent)[-1]
 				except Exception as autoreply_error:
-					print autoreply_error
+					print autoreply_error, "line 42 error"
 				print email
 				if email:
 					g['replied_to'] = email.id
+			if 'replied_to' not in g:
+				print "could not find reply, looking for last email exchange"
+				email = None
+				try:
+					email = sorted(db.session.query(models.Email).filter_by(from_address=g['to_address'], to_address=g['from_address']).all(), key=lambda x:x.date_sent)[-1]
+					print email, "email"
+					if email:
+						g['replied_to'] = email.id
+				except Exception as error:
+					print error, "line 54 error"
 			if 'auto_reply' in g: del g['auto_reply']
 			modules.get_or_create(models.Email, google_message_id=g['google_message_id'], defaults = g)
 
@@ -59,7 +69,6 @@ def handleApp(appid = None):
 		_thread, t_c = modules.get_or_create(models.Thread, unique_thread_id=thread['id'])
 		try:
 			checkForReplies(_thread, access_token)
-			print "CHECKED"
 		except Exception as ee:
 			print ee, "handle check for replies error"
 		_thread.last_checked = datetime.now()
