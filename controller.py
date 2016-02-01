@@ -392,8 +392,10 @@ def makeNewUser():
 	for i in ['google_email', 'google_access_token', 'google_refresh_token']:
 		d[i] = request.form[i]
 	if len(d) < 3:
-		return jsonify(**{'success':False})
-	a = getAppIDForEmail(d['google_email'], d)
+		return jsonify(success = False)
+	a, user_id, app_created = getAppIDForEmail(d['google_email'], d)
+	if app_created:
+		e, created = modules.get_or_create(models.App, appid=a, website_id = 1, user_id=user_id, **d)
 	return jsonify(success=True, appid=a)
 
 # gets appd for a given email, if it doesn't exist, itll make one
@@ -401,8 +403,9 @@ def getAppIDForEmail(email, app_dict = {}):
 	u, t = modules.get_or_create(models.User, email=email, defaults={'is_verified':True})
 	apps = db.session.query(models.App).filter_by(user = u).all()
 	if len(apps):
-		return apps[0].appid
-	return None
+		return apps[0].appid, u.id, False
+	random_app = 'aa'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(9))
+	return random_app, u.id, True
 
 @application.route('/setItDown',methods=['GET'])
 def setItDown():
