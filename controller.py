@@ -31,7 +31,6 @@ import modules
 import modles
 import models
 import geocoder
-from random import randint
 import json
 from datetime import datetime
 from collections import Counter
@@ -722,16 +721,34 @@ def cadenceInfo():
 
 	return jsonify(stats)
 
+@application.route('/getRandomEmails',methods=['GET'])
+def getRandomEmails():
+	print request.args, int(request.args.get('num'))
+	emails = random.sample(db.session.query(models.Email).filter_by(to_address='jamasen@legionanalytics.com').all(), int(request.args.get('num', 20)))
+	return jsonify(texts=[e.text for e in emails])
 
 
 @application.route('/check',methods=['GET'])
 def check():
-	# modles.handleApp('aaQKNO9G7WS')
-
-	# modles.handleApp('aa5YZ3KU4BV')	
-	# access_token = modles.appGoogleAPI(modules.getModel(models.App, appid="aaDKE34H8TD"))
-	# print googleAPI.archiveThread(access_token, "15233f47c4022174")
-	return jsonify()
+	print "checking"
+	return
+	from bs4 import BeautifulSoup as bs
+	texts, labels = [], []
+	access_token = modles.appGoogleAPI(modules.getModel(models.App, appid="aaQKNO9G7WS"))
+	for label in googleAPI.getUsedLabels(access_token)['labels']:
+		if label['name'] == 'legion' or label['name'] == label['name'].upper(): continue
+		print label
+		for message in googleAPI.getMessagesMarkedWithLabel(access_token, label['id']).get('messages', []):
+			e = modules.getModel(models.Email, google_message_id=message['id'], to_address='jamasen@legionanalytics.com')
+			if not e: continue
+			if not e.text and not e.html: continue
+			if e.text:
+				t = e.text
+			else:
+				t = bs(e.html).text
+			texts.append(t.split('> ')[0])
+			labels.append(label['name'])
+	return jsonify(texts=texts, labels=labels)
 
 	
 
@@ -751,7 +768,9 @@ class Scheduler(object):
 			raise Exception("this timer is already running")
 	def _run(self):
 		self.function()
-		self._t = Timer(self.sleep_time, self._run)
+		random_time = random.choice(range(self.sleep_time, self.sleep_time*5))
+		print "waiting for", random_time, "seconds"
+		self._t = Timer(random_time, self._run)
 		self._t.start()
 	def stop(self):
 		if self._t is not None:
@@ -765,7 +784,7 @@ DEBUG = False
 if not DEBUG:
 	@application.before_first_request
 	def startScheduler():
-		scheduler = Scheduler(60, modles.handleRandomApp)
+		scheduler = Scheduler(2, modles.handleRandomApp)
 		scheduler.start()
 
 

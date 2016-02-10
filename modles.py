@@ -43,7 +43,7 @@ def checkForReplies(thread, access_token, from_ = 'google'):
 				if email:
 					g['replied_to'] = email.id
 			if 'replied_to' not in g:
-				print "could not find reply, looking for last email exchange"
+				# print "could not find reply, looking for last email exchange"
 				email = None
 				try:
 					email = sorted(db.session.query(models.Email).filter_by(from_address=g['to_address'], to_address=g['from_address']).all(), key=lambda x:x.date_sent)[-1]
@@ -60,12 +60,11 @@ def checkForReplies(thread, access_token, from_ = 'google'):
 #ADDDD eventually need to see if its an outlook or google thread
 def handleApp(appid = None):
 	if not appid: return False
-	print "checking app %s" %(appid)
+	print " at %s checking app %s" %(str(datetime.now()), appid)
 	a = db.session.query(models.App).filter_by(appid=appid).first()
 	access_token = appGoogleAPI(a)
 	threads = googleAPI.getThreads(access_token)
 	for thread in threads:
-		print "looking for replies to thread %s " % thread
 		_thread, t_c = modules.get_or_create(models.Thread, unique_thread_id=thread['id'])
 		try:
 			checkForReplies(_thread, access_token)
@@ -86,6 +85,7 @@ def handleApp(appid = None):
 def handleRandomApp():
 	print "attempting to handle a random app"
 	try:
+
 		u = random.sample(db.session.query(models.App.appid).all(), 1)[0][0]
 		handleApp(u)
 	except Exception as random_eror:

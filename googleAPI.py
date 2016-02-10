@@ -145,7 +145,6 @@ def cleanMessage(access_token, m, sent_through_latracking):
 		_bounce = detectBouncedEmailFromMessage(m.get('snippet', ''), new_m.get('subject', ''))
 	else:
 		_bounce = None
-	print _bounce, "_bounce"
 	new_m['bounce'] = _bounce is not None
 	if new_m['bounce'] and sent_through_latracking: #archive bounces if it was sent through latracking
 		try:
@@ -167,6 +166,23 @@ def archiveThread(access_token, threadId):
 	message = requests.post(url, headers = headers, data = data).json()
 	return message
 
+def getUsedLabels(access_token):
+	url = 'https://www.googleapis.com/gmail/v1/users/me/labels'
+	headers = {}
+	headers['content-type'] = 'application/json'
+	headers['authorization'] = 'Bearer ' + access_token
+	message = requests.get(url, headers = headers).json()
+	return message
+
+def getMessagesMarkedWithLabel(access_token, label_id):
+	url = 'https://www.googleapis.com/gmail/v1/users/me/messages?labelIds='+label_id
+	headers = {}
+	headers['content-type'] = 'application/json'
+	headers['authorization'] = 'Bearer ' + access_token
+	# headers['labelIds'] = label_id
+	# print requests.get(url, headers = headers).text
+	messages = requests.get(url, headers = headers).json()
+	return messages
 
 def getThreadMessages(threadId, access_token):
 	url = 'https://www.googleapis.com/gmail/v1/users/me/threads/'+threadId
