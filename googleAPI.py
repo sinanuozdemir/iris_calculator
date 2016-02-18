@@ -1,3 +1,4 @@
+import time
 import re
 from bs4 import BeautifulSoup as bs
 import dateutil.parser
@@ -150,7 +151,7 @@ def cleanMessage(access_token, m, sent_through_latracking):
 		try:
 			archiveThread(access_token, new_m['google_thread_id'])
 		except Exception as archive_error:
-			print archive_error, "archive_error"
+			pass
 	new_m['auto_reply'] = detectAutoReply(new_m.get('subject', ''))
 	new_m['bounced_email'] = _bounce
 	return {k:v for k, v in new_m.iteritems() if v is not None and v != '' and v != []}
@@ -179,10 +180,9 @@ def getMessagesMarkedWithLabel(access_token, label_id):
 	headers = {}
 	headers['content-type'] = 'application/json'
 	headers['authorization'] = 'Bearer ' + access_token
-	# headers['labelIds'] = label_id
-	# print requests.get(url, headers = headers).text
 	messages = requests.get(url, headers = headers).json()
 	return messages
+
 
 def getThreadMessages(threadId, access_token):
 	url = 'https://www.googleapis.com/gmail/v1/users/me/threads/'+threadId
@@ -192,14 +192,27 @@ def getThreadMessages(threadId, access_token):
 	try:
 		messages = sorted(messages, key = lambda x:x['internalDate'])
 	except Exception as sorted_error:
-		print sorted_error, "sroteed_ererr"
+		pass
 	return messages
 
+
 def getThreads(access_token):
-	url = 'https://www.googleapis.com/gmail/v1/users/me/threads/'
 	headers = {}
 	headers['authorization'] = 'Bearer ' + access_token
-	threads = requests.get(url, headers = headers).json()['threads']
+	next_page = '1'
+	threads = []
+	num = 3 #gets three pages worth of threads, thats 300 of them
+	while next_page is not None:
+		if next_page == '1':
+			url = 'https://www.googleapis.com/gmail/v1/users/me/threads?maxResults=100'
+		else:
+			url = 'https://www.googleapis.com/gmail/v1/users/me/threads?maxResults=100&pageToken='+next_page
+		response = requests.get(url, headers = headers).json()
+		next_page = response.get('nextPageToken')
+		threads += response['threads']
+		time.sleep(2)
+		num -=1
+		if num <=0: break
 	return threads
 
 
