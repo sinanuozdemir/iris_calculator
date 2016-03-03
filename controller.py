@@ -1174,7 +1174,7 @@ DEBUG = False
 if not DEBUG:
 	@application.before_first_request
 	def startScheduler():
-		scheduler = Scheduler(15, modles.handleRandomApp)
+		scheduler = Scheduler(5, modles.handleRandomApp)
 		scheduler.start()
 
 

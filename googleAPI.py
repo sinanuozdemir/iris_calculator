@@ -147,12 +147,14 @@ def cleanMessage(access_token, m, sent_through_latracking):
 	else:
 		_bounce = None
 	new_m['bounce'] = _bounce is not None
-	if new_m['bounce'] and sent_through_latracking: #archive bounces if it was sent through latracking
+	new_m['auto_reply'] = detectAutoReply(new_m.get('subject', ''))
+	# archive bounces and auto-replies if it was sent through latracking
+	if (new_m['auto_reply'] or new_m['bounce']) and sent_through_latracking: 
 		try:
 			archiveThread(access_token, new_m['google_thread_id'])
 		except Exception as archive_error:
+			print archive_error, "archive_error"
 			pass
-	new_m['auto_reply'] = detectAutoReply(new_m.get('subject', ''))
 	new_m['bounced_email'] = _bounce
 	return {k:v for k, v in new_m.iteritems() if v is not None and v != '' and v != []}
 
