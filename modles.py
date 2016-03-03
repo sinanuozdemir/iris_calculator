@@ -77,7 +77,6 @@ def handleApp(appid = None):
 
 def handleRandomApp():
 	try:
-
 		u = random.sample(db.session.query(models.App.appid).all(), 1)[0][0]
 		handleApp(u)
 	except Exception as random_eror:
