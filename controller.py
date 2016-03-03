@@ -729,6 +729,7 @@ def getRandomEmails():
 
 @application.route('/check',methods=['GET'])
 def check():
+	modles.handleApp('aaQ7WENBPBQ')
 	return jsonify()
 	import lml
 

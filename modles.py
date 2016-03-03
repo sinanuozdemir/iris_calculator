@@ -56,7 +56,7 @@ def handleApp(appid = None):
 	if not appid: return False
 	a = db.session.query(models.App).filter_by(appid=appid).first()
 	access_token = appGoogleAPI(a)
-	threads = googleAPI.getThreads(access_token)
+	threads = googleAPI.getThreads(access_token, a.google_email)
 	for thread in threads:
 		_thread, t_c = modules.get_or_create(models.Thread, unique_thread_id=thread['id'])
 		try:

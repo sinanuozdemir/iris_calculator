@@ -154,7 +154,6 @@ def cleanMessage(access_token, m, sent_through_latracking):
 			archiveThread(access_token, new_m['google_thread_id'])
 		except Exception as archive_error:
 			print archive_error, "archive_error"
-			pass
 	new_m['bounced_email'] = _bounce
 	return {k:v for k, v in new_m.iteritems() if v is not None and v != '' and v != []}
 
@@ -198,12 +197,26 @@ def getThreadMessages(threadId, access_token):
 	return messages
 
 
-def getThreads(access_token):
+def getThreads(access_token, email):
 	headers = {}
 	headers['authorization'] = 'Bearer ' + access_token
 	next_page = '1'
 	threads = []
-	num = 3 #gets three pages worth of threads, thats 300 of them
+	num = 2 # gets two pages worth of threads directly sent to this person, thats 200 of them
+	while next_page is not None:
+		if next_page == '1':
+			url = 'https://www.googleapis.com/gmail/v1/users/me/threads?maxResults=100&q=to:'+email
+		else:
+			url = 'https://www.googleapis.com/gmail/v1/users/me/threads?maxResults=100&pageToken='+next_page+'&q=to:'+email
+		response = requests.get(url, headers = headers).json()
+		next_page = response.get('nextPageToken')
+		if 'threads' in response:
+			threads += response['threads']
+		time.sleep(2)
+		num -=1
+		if num <=0: break
+
+	num = 2 # gets two pages worth of threads, thats 200 of them
 	while next_page is not None:
 		if next_page == '1':
 			url = 'https://www.googleapis.com/gmail/v1/users/me/threads?maxResults=100'
@@ -211,7 +224,8 @@ def getThreads(access_token):
 			url = 'https://www.googleapis.com/gmail/v1/users/me/threads?maxResults=100&pageToken='+next_page
 		response = requests.get(url, headers = headers).json()
 		next_page = response.get('nextPageToken')
-		threads += response['threads']
+		if 'threads' in response:
+			threads += response['threads']
 		time.sleep(2)
 		num -=1
 		if num <=0: break
