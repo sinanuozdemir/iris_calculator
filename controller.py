@@ -658,6 +658,8 @@ def emailStats():
 		return jsonify(fuck="off")
 	ids = db.session.query(models.Email).with_entities(models.Email.id).filter(models.Email.emailid.in_(emailids)).all()
 	num_emails = float(len(ids))
+	if num_emails == 0:
+		return jsonify(bounce_rate=0., open_rate=0., click_rate=0., reply_rate = 0.)
 	
 	opens = db.session.query(models.Visit).distinct(models.Visit.email_id).with_entities(models.Visit.id).filter(models.Visit.email_id.in_(ids)).count()
 	replies = db.session.query(models.Email).distinct(models.Email.replied_to).with_entities(models.Email.replied_to).filter(and_(models.Email.replied_to.in_(ids), models.Email.bounce==False)).count()
@@ -676,9 +678,10 @@ def cadenceInfo():
 		return jsonify(fuck="off")
 	dates = {}
 	utc_now = datetime.utcnow()
+	emailids = emailids
 	now = datetime.utcnow()+timedelta(hours=int(request.form.get('offset', -8)))
-	emails = db.session.query(models.Email).filter(models.Email.emailid.in_(emailids)).all()
-	emails = [(e.id, e.date_sent) for e in emails if e.id and e.date_sent]
+	emails_orm = db.session.query(models.Email).with_entities(models.Email.id, models.Email.date_sent).filter(models.Email.emailid.in_(emailids)).all()
+	emails = [(e.id, e.date_sent) for e in emails_orm if e.id and e.date_sent]
 	for e in emails:
 		date_formatted = datetime.strftime(e[1], '%m/%d/%Y')
 		if date_formatted not in dates: dates[date_formatted] = []
@@ -713,6 +716,7 @@ def cadenceInfo():
 			'replies':sum([all_replies.get(a, 0) for a in dates[_day]]), 
 			'clicks':sum([all_clicks.get(a, 0) for a in dates[_day]]),
 		}
+
 	stats['dates'] = [(x, stats['dates'][x]) for x in sorted(stats['dates'])]
 	stats['most_recent_replies'] = most_recent_replies
 	stats['most_recent_clicks'] = most_recent_clicks
