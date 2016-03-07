@@ -426,7 +426,7 @@ def setItDown():
 def _makeDBLink(email_id, text, url, appid):
 	r = re.match(website_re, url)
 	if '.' not in r.group(4):
-		return jsonify( status='failure', reason='not a valid url')
+		return {'success': False, 'reason': 'not a valid url'}
 	if not r.group(1):
 		u = 'http://'
 	else:
@@ -486,8 +486,9 @@ def sendEmail():
 		for a in soup.find_all('a'):
 			if a.get('href') and 'latracking.com/r/' not in a['href'].lower():
 				cleaned = _makeDBLink(e['email_id'], a.text, a['href'], appid)
-				links.append({'url':a.get('href'), 'text':a.text, 'cleaned':cleaned})
-				a['href'] = cleaned['latracking_url']
+				if cleaned['success']:
+					links.append({'url':a.get('href'), 'text':a.text, 'cleaned':cleaned})
+					a['href'] = cleaned['latracking_url']
 		new_tag = soup.new_tag("img", src=e['tracking_link'], style="height: 1px; width:1px; display: none !important;")
 		soup.append(new_tag)
 		html = str(soup)
