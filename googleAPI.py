@@ -34,20 +34,24 @@ def goodGoogleAuth(token):
 
 def getEmailFromText(t):
 	try:
-		return re.search(SIMPLE_EMAIL_REGEX, t).group(1)
+		return re.search(SIMPLE_EMAIL_REGEX, t).group(1).lower()
 	except:
 		return None
 
-def detectAutoReply(subject):
-	subject = subject.lower()
-	if 'delayed response' in subject:
+def detectAutoReply(email_dict):
+	subject = email_dict.get('subject', '').lower()
+	text = email_dict.get('text', '').lower()+' '+email_dict.get('snippet', '').lower()+' '+email_dict.get('html', '').lower()
+	if 'delayed response' in subject or 'automatic reply' in subject:
+		return True
+	if 'out of office' in subject or 'out of office' in text:
+		return True
+	if 'ooo-' in subject or 'ooo -' in subject:
 		return True
 	return False
 
 
 def detectBouncedEmailFromMessage(snippet, subject):
 	SIMPLE_EMAIL_REGEX = '(([a-zA-Z0-9][\w\.-]+)@([a-z-_A-Z0-9\.]+)\.(\w\w\w?))'
-
 	snippet = snippet.lower()
 	subject = subject.lower()
 
@@ -56,7 +60,7 @@ def detectBouncedEmailFromMessage(snippet, subject):
 			return re.search(SIMPLE_EMAIL_REGEX, snippet).group(1)
 		except:
 			return 'unknown'
-	elif 'failure notice' in subject:
+	elif 'failure notice' in subject or 'delivery failure' in subject:
 		try:
 			return re.search(SIMPLE_EMAIL_REGEX, snippet).group(1)
 		except:
@@ -147,9 +151,10 @@ def cleanMessage(access_token, m, sent_through_latracking):
 	else:
 		_bounce = None
 	new_m['bounce'] = _bounce is not None
-	new_m['auto_reply'] = detectAutoReply(new_m.get('subject', ''))
+	new_m['auto_reply'] = detectAutoReply(new_m)
 	# archive bounces and auto-replies if it was sent through latracking
 	if (new_m['auto_reply'] or new_m['bounce']) and sent_through_latracking: 
+		print 'archiving', new_m.get('subject')
 		try:
 			archiveThread(access_token, new_m['google_thread_id'])
 		except Exception as archive_error:
@@ -203,6 +208,7 @@ def getThreads(access_token, email):
 	next_page = '1'
 	threads = []
 	num = 2 # gets two pages worth of threads directly sent to this person, thats 200 of them
+	# specifically gets threads aimed at user
 	while next_page is not None:
 		if next_page == '1':
 			url = 'https://www.googleapis.com/gmail/v1/users/me/threads?maxResults=100&q=to:'+email
@@ -217,6 +223,7 @@ def getThreads(access_token, email):
 		if num <=0: break
 
 	num = 2 # gets two pages worth of threads, thats 200 of them
+	# gets threads in general
 	while next_page is not None:
 		if next_page == '1':
 			url = 'https://www.googleapis.com/gmail/v1/users/me/threads?maxResults=100'

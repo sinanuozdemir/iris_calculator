@@ -55,6 +55,7 @@ def checkForReplies(thread, access_token, from_ = 'google'):
 def handleApp(appid = None):
 	if not appid: return False
 	a = db.session.query(models.App).filter_by(appid=appid).first()
+	print "handling app", appid
 	access_token = appGoogleAPI(a)
 	threads = googleAPI.getThreads(access_token, a.google_email)
 	for thread in threads:

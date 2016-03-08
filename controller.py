@@ -765,6 +765,7 @@ def check():
 		'no longer here': ['no longer here'],
 		'no longer company': ['no longer company']
 	}
+
 	saved = {
 	    "labels": [
 	        "acquired", 
