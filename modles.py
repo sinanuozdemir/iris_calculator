@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timedelta	
 import time
 import random
@@ -6,6 +7,20 @@ import googleAPI
 from controller import db
 import models
 import modules
+from bs4 import BeautifulSoup as bs
+import string
+
+website_re = re.compile("(https?://)?(www.)?([^\.]+)([\.\w]+)/?((\w+/?)*(\?[\w=]+)?)", re.IGNORECASE)
+
+
+response_template = '''<span style="color: rgb(34, 34, 34); font-size: small; background-color: inherit;">{{insert_response_here}}'''
+prediction_dict = {
+	'unsubscribe':['unsubscribe', "remove me", "take me off"]
+
+}
+response_dict = {
+	'unsubscribe': ['I am so sorry to bother you! I will remove you from the list immediately.']
+}
 
 def appGoogleAPI(app):
 	new_token = googleAPI.refreshAccessToken(app.google_access_token, app.google_refresh_token)
@@ -14,41 +29,162 @@ def appGoogleAPI(app):
 		db.session.commit()
 	return app.google_access_token
 
-def checkForReplies(thread, access_token, from_ = 'google'):
+def checkForReplies(app_id, user_email, thread, access_token, from_ = 'google'):
+	text_to_respond_to = None
 	if from_ == 'google':
 		thread_emails = thread.emails
 		sent_through_latracking = len([a.app_id for a in thread_emails if a.app_id]) > 0
 		messages = googleAPI.getThreadMessages(thread.unique_thread_id, access_token)
 		if len(messages) == len(thread_emails):
-			#  "no new messages"
-			return
+			print  "no new messages"
+			# return
 		for message in messages:
 			try:
-				g = googleAPI.cleanMessage(access_token, message, sent_through_latracking)
+				g = googleAPI.cleanMessage(message)
 			except Exception as clean_error:
+				print clean_error, "clean_error"
 				pass
 			g['thread_id'] = thread.id	
 			if len(thread.emails) > 0:
 				g['replied_to'] = sorted(thread.emails, key = lambda x: x.date_sent)[-1].id
 			elif g['auto_reply']: #  "IS AN AUTOREPLY"
 				email = None
-				try:
-					email = sorted(db.session.query(models.Email).filter_by(from_address=g['to_address'], to_address=g['from_address']).all(), key=lambda x:x.date_sent)[-1]
-				except Exception as autoreply_error:
-					pass
-				if email:
-					g['replied_to'] = email.id
+				try: email = sorted(db.session.query(models.Email).filter_by(from_address=g['to_address'], to_address=g['from_address']).all(), key=lambda x:x.date_sent)[-1]
+				except: pass
+				if email: g['replied_to'] = email.id
+			
+
 			if 'replied_to' not in g:   #  "could not find reply, looking for last email exchange"
 				email = None
-				try:
-					email = sorted(db.session.query(models.Email).filter_by(from_address=g['to_address'], to_address=g['from_address']).all(), key=lambda x:x.date_sent)[-1]
-					if email:
-						g['replied_to'] = email.id
-				except Exception as error:
-					pass
-			if 'auto_reply' in g: del g['auto_reply']
-			modules.get_or_create(models.Email, google_message_id=g['google_message_id'], defaults = g)
+				try: email = sorted(db.session.query(models.Email).filter_by(from_address=g['to_address'], to_address=g['from_address']).all(), key=lambda x:x.date_sent)[-1]
+				except: pass
+				if email: g['replied_to'] = email.id
 
+			# archive bounces and auto-replies if it was sent through latracking
+			if (g['auto_reply'] or g['bounce']) and sent_through_latracking: 
+				try:
+					googleAPI.archiveThread(access_token, g['google_thread_id'])
+				except Exception as archive_error:
+					print archive_error, "archive_error", g
+			
+			if 'auto_reply' in g: del g['auto_reply']
+
+
+
+			email_in_db, email_created = modules.get_or_create(models.Email, google_message_id=g['google_message_id'], defaults = g)
+			if email_created and g['to_address'].lower() == user_email.lower() and g.get('text') and g.get('from_address'):
+				text_to_respond_to = g['text']
+				from_address = g['from_address']
+
+		if thread.latracking_reply and text_to_respond_to: #trigger our auto reply
+			print "responding to ", text_to_respond_to
+			response = None
+			for label, keys in prediction_dict.iteritems():
+				if sum([l in text_to_respond_to.lower() for l in keys]) > 0:
+					response = random.choice(response_dict[label])
+			if response:
+				data = {}
+				data['html'] = response_template.replace('{{insert_response_here}}', response)
+				data['subject'] = thread.emails[-1].subject
+				data['to_address'] = from_address
+				data['appid'] = app_id
+				data['threadID'] = thread.unique_thread_id
+				print "auto replying to it", data
+				sendEmailFromController(data)
+			else:
+				pass
+				# maybe label with needs a human
+
+
+def _makeDBLink(email_id, text, url, appid):
+	r = re.match(website_re, url)
+	if '.' not in r.group(4):
+		return {'success': False, 'reason': 'not a valid url'}
+	if not r.group(1):
+		u = 'http://'
+	else:
+		u = r.group(1)
+	u+=r.group(3)+r.group(4)
+	if r.group(5): u += '/'+r.group(5)
+	app = modules.getModel(models.App, appid=appid)
+	if app:
+		created = False
+		while not created:
+			random_link = 'll'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(9))
+			l, created = modules.get_or_create(models.Link, linkid=random_link, defaults = {'app_id':app.id, 'email_id':email_id, 'url':u, 'text': text})
+		return {'success':True, 'link_id':random_link, 'url':u, 'latracking_url':'https://www.latracking.com/r/'+random_link}
+	return {'success':False}
+
+def _makeDBEmail(form_dict):
+	app = modules.getModel(models.App, appid=form_dict['appid'])
+	if app:
+		d = {}
+		created = False
+		d['app_id'] = app.id
+		while not created:
+			random_email = 'ee'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(9))
+			for i in ['google_message_id', 'google_thread_id', 'date_sent', 'text', 'html', 'cc_address', 'bcc_address', 'to_address', 'from_address', 'subject']:
+				if i in form_dict: 
+					d[i] = form_dict[i]
+					if i == 'text':
+						d['makeshift_sentiment'] = googleAPI.MakeshiftSentiment(d[i])
+					elif i == 'html':
+						d['makeshift_sentiment'] = googleAPI.MakeshiftSentiment(bs(d[i]).text)
+			e, created = modules.get_or_create(models.Email, emailid=random_email, **d)
+		return {'success':True, 'email_id':e.id, 'emailid':random_email, 'tracking_link':'https://www.latracking.com/e/'+random_email}
+	return {'success':False}
+
+	
+def sendEmailFromController(email_dict):
+	if 'appid' not in email_dict: 
+		return {'success':False, 'reason':'need tracking_id'}
+	appid = email_dict['appid']
+	app = modules.getModel(models.App, appid = email_dict.get('appid'))
+	if not app or not app.user.is_verified:
+		return {'success':False, 'reason':'bad app id'}
+	html = email_dict.get('html', '')
+	try:
+		if db.session.query(models.Email).filter_by(subject=email_dict['subject'], html = html, from_address=app.google_email, to_address=email_dict['to_address']).first():
+			return {'success':False, 'reason':'duplicate email alert'}
+	except Exception as ee:
+		pass
+	if html:
+		links = []
+		soup = bs(html)
+		d = {'appid':appid}
+		for i in ['text', 'html', 'cc_address', 'bcc_address', 'to_address', 'from_address', 'subject']:
+			if i in email_dict: d[i] = email_dict[i]
+		e = _makeDBEmail(d)
+		for a in soup.find_all('a'):
+			if a.get('href') and 'latracking.com/r/' not in a['href'].lower() and 'mailto:' not in a['href'].lower() and 'tel:' not in a['href'].lower():
+				cleaned = _makeDBLink(e['email_id'], a.text, a['href'], appid)
+				if cleaned['success']:
+					links.append({'url':a.get('href'), 'text':a.text, 'cleaned':cleaned})
+					a['href'] = cleaned['latracking_url']
+		new_tag = soup.new_tag("img", src=e['tracking_link'], style="height: 1px; width:1px; display: none !important;")
+		soup.append(new_tag)
+		html = str(soup)
+	access_token = appGoogleAPI(app)
+	threadID = None
+	if email_dict.get('threadID'):
+		threadID = modules.getModel(models.Thread, unique_thread_id=email_dict.get('threadID')).unique_thread_id
+	response = googleAPI.sendEmail(email = app.google_email, access_token = access_token, to_address = d['to_address'], subject = d.get('subject', ''), bcc_address = d.get('bcc_address', ''), html = html, text = email_dict.get('text', ''), threadID = threadID)
+	email = db.session.query(models.Email).filter_by(id=e['email_id']).first()
+	email.google_message_id = response['id']
+	email.from_address = app.google_email
+	thread_created = False
+	while not thread_created:
+		random_thread = 'tt'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(9))
+		thread, thread_created = modules.get_or_create(models.Thread, threadid=random_thread, unique_thread_id = response['threadId'], origin='google', app_id = app.id, defaults = {'first_made':datetime.now()})
+	if 'kylie' in app.google_email and 'sinan' in email_dict['to_address']:
+		thread.latracking_reply = True
+	email.google_thread_id = response['threadId']
+	email.thread_id = thread.id
+	email.date_sent = datetime.utcnow()
+	db.session.commit()
+	return {'success':True, 'links':links, 'cleaned_html':str(soup), 'email':e, 'threadid':random_thread}
+	# j = jsonify(success=True, links=links, cleaned_html=str(soup), email=e, threadid = random_thread)
+	# return j
 
 
 #ADDDD eventually need to see if its an outlook or google thread
@@ -61,19 +197,9 @@ def handleApp(appid = None):
 	for thread in threads:
 		_thread, t_c = modules.get_or_create(models.Thread, unique_thread_id=thread['id'])
 		try:
-			checkForReplies(_thread, access_token)
+			checkForReplies(appid, a.google_email, _thread, access_token)
 		except Exception as ee:
-			pass
-		_thread.last_checked = datetime.now()
-		tos, froms = [], []
-		for t, f in [(t.to_address, t.from_address) for t in _thread.emails]:
-			if t and f:
-				tos += [a.lower() for a in t.split(',')]
-				froms += [a.lower() for a in f.split(',')]
-		if len(tos) > 0 and len(froms) > 0:
-			_thread.people_in_conversation = len(set(tos) | set(froms))
-			_thread.all_parties_replied = len(set(tos) | set(froms)) == len(set(tos) & set(froms))
-			db.session.commit()
+			print ee, "check_for_replies_error"
 	return {'status':'done', 'appid':appid}
 
 def handleRandomApp():

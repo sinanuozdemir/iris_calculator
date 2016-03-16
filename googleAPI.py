@@ -50,10 +50,15 @@ def detectAutoReply(email_dict):
 	return False
 
 
-def detectBouncedEmailFromMessage(snippet, subject):
+def detectBouncedEmailFromMessage(d):
 	SIMPLE_EMAIL_REGEX = '(([a-zA-Z0-9][\w\.-]+)@([a-z-_A-Z0-9\.]+)\.(\w\w\w?))'
-	snippet = snippet.lower()
-	subject = subject.lower()
+	snippet = d.get('text', '').lower()
+
+	if snippet == '': snippet = d.get('html', '').lower()
+	if snippet == '': snippet = d.get('snippet', '').lower()
+	subject = d.get('subject', '').lower()
+	from_address = d.get('from_address', '').lower()
+
 
 	if 'delivery' in snippet and 'failed' in snippet:
 		try:
@@ -85,6 +90,8 @@ def detectBouncedEmailFromMessage(snippet, subject):
 			return re.search(SIMPLE_EMAIL_REGEX, subject).group(1)
 		except:
 			return 'unknown'
+	elif 'mailer-daemon' in from_address:
+		return 'unknown'
 	return None
 
 def getGoogleAccessToken(refresh_token):
@@ -113,7 +120,7 @@ def MakeshiftSentiment(text):
 		text = re.sub(k, '', text)
 	return score
 
-def cleanMessage(access_token, m, sent_through_latracking):
+def cleanMessage(m):
 	new_m = {}
 	new_m['google_message_id'] = m.get('id')
 	new_m['google_thread_id'] = m.get('threadId')
@@ -139,27 +146,18 @@ def cleanMessage(access_token, m, sent_through_latracking):
 			new_m['html'] = base64.urlsafe_b64decode(str(p['body']['data']))
 	if new_m.get('html') and not new_m.get('text'):
 		new_m['text'] = bs(new_m['html']).text
+	if 'text' not in new_m and 'snippet' in m:
+		new_m['text'] = m['snippet']
 	if new_m.get('text'):
 		new_m['makeshift_sentiment'] = MakeshiftSentiment(new_m.get('text'))
 	new_m['emailid'] = 'ee'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(9))
-	if 'text' in new_m:
-		_bounce = detectBouncedEmailFromMessage(new_m.get('text', ''), new_m.get('subject', ''))
-	elif 'html' in new_m:
-		_bounce = detectBouncedEmailFromMessage(new_m.get('html', ''), new_m.get('subject', ''))
-	elif 'snippet' in m:
-		_bounce = detectBouncedEmailFromMessage(m.get('snippet', ''), new_m.get('subject', ''))
-	else:
+	try:
+		_bounce = detectBouncedEmailFromMessage(new_m)
+	except:
 		_bounce = None
+	new_m['bounced_email'] = _bounce
 	new_m['bounce'] = _bounce is not None
 	new_m['auto_reply'] = detectAutoReply(new_m)
-	# archive bounces and auto-replies if it was sent through latracking
-	if (new_m['auto_reply'] or new_m['bounce']) and sent_through_latracking: 
-		print 'archiving', new_m.get('subject')
-		try:
-			archiveThread(access_token, new_m['google_thread_id'])
-		except Exception as archive_error:
-			print archive_error, "archive_error"
-	new_m['bounced_email'] = _bounce
 	return {k:v for k, v in new_m.iteritems() if v is not None and v != '' and v != []}
 
 def archiveThread(access_token, threadId):

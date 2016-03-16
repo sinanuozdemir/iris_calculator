@@ -3,6 +3,13 @@ from controller import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
+
+class MLModel(db.Model):
+	__tablename__ = 'mlmodel'
+	id = db.Column(db.Integer, primary_key=True)
+	model = db.Column(db.PickleType(pickler='json'), index = False)
+	ml_model = db.Column(db.PickleType(pickler='cPickle.pickle'), index = False)
+
 class Domain(db.Model):
 	__tablename__ = 'domain'
 	id = db.Column(db.Integer, primary_key=True)
@@ -74,6 +81,7 @@ class Thread(db.Model):
 	origin = db.Column(db.String(128), index=True)
 	unique_thread_id = db.Column(db.String(128), index=True) # the google/outlook thread id
 	all_parties_replied = db.Column(db.Boolean, index=False, default=False)
+	latracking_reply = db.Column(db.Boolean, index=False, default=False)
 	people_in_conversation = db.Column(db.Integer, default = 0)
 	last_checked = db.Column(db.DateTime())
 	first_made = db.Column(db.DateTime())

@@ -423,95 +423,10 @@ def setItDown():
 #### Make and Send Emails ####
 ##############################
 
-def _makeDBLink(email_id, text, url, appid):
-	r = re.match(website_re, url)
-	if '.' not in r.group(4):
-		return {'success': False, 'reason': 'not a valid url'}
-	if not r.group(1):
-		u = 'http://'
-	else:
-		u = r.group(1)
-	u+=r.group(3)+r.group(4)
-	if r.group(5): u += '/'+r.group(5)
-	app = modules.getModel(models.App, appid=appid)
-	if app:
-		created = False
-		while not created:
-			random_link = 'll'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(9))
-			l, created = modules.get_or_create(models.Link, linkid=random_link, defaults = {'app_id':app.id, 'email_id':email_id, 'url':u, 'text': text})
-		return {'success':True, 'link_id':random_link, 'url':u, 'latracking_url':'https://www.latracking.com/r/'+random_link}
-	return {'success':False}
-
-def _makeDBEmail(form_dict):
-	app = modules.getModel(models.App, appid=form_dict['appid'])
-	if app:
-		d = {}
-		created = False
-		d['app_id'] = app.id
-		while not created:
-			random_email = 'ee'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(9))
-			for i in ['google_message_id', 'google_thread_id', 'date_sent', 'text', 'html', 'cc_address', 'bcc_address', 'to_address', 'from_address', 'subject']:
-				if i in form_dict: 
-					d[i] = form_dict[i]
-					if i == 'text':
-						d['makeshift_sentiment'] = googleAPI.MakeshiftSentiment(d[i])
-					elif i == 'html':
-						d['makeshift_sentiment'] = googleAPI.MakeshiftSentiment(bs(d[i]).text)
-			e, created = modules.get_or_create(models.Email, emailid=random_email, **d)
-		return {'success':True, 'email_id':e.id, 'emailid':random_email, 'tracking_link':'https://www.latracking.com/e/'+random_email}
-	return {'success':False}
-
 @application.route('/sendEmail',methods=['POST', 'OPTIONS'])
 @crossdomain(origin='*')
 def sendEmail():
-	if 'appid' not in request.form: 
-		return jsonify(success=False, reason='need tracking_id')
-	appid = request.form['appid']
-	app = modules.getModel(models.App, appid = request.form.get('appid'))
-	if not app or not app.user.is_verified:
-		return jsonify(success=False, reason='app not there or user not verified')
-	html = request.form.get('html', '')
-	try:
-		if db.session.query(models.Email).filter_by(subject=request.form['subject'], html = html, from_address=app.google_email, to_address=request.form['to_address']).first():
-			return jsonify(success=False, reason='duplicate email alert')
-	except Exception as ee:
-		pass
-	if html:
-		links = []
-		soup = bs(html)
-		d = {'appid':appid}
-		for i in ['text', 'html', 'cc_address', 'bcc_address', 'to_address', 'from_address', 'subject']:
-			if i in request.form: d[i] = request.form[i]
-		e = _makeDBEmail(d)
-		for a in soup.find_all('a'):
-			if a.get('href') and 'latracking.com/r/' not in a['href'].lower():
-				cleaned = _makeDBLink(e['email_id'], a.text, a['href'], appid)
-				if cleaned['success']:
-					links.append({'url':a.get('href'), 'text':a.text, 'cleaned':cleaned})
-					a['href'] = cleaned['latracking_url']
-		new_tag = soup.new_tag("img", src=e['tracking_link'], style="height: 1px; width:1px; display: none !important;")
-		soup.append(new_tag)
-		html = str(soup)
-	access_token = modles.appGoogleAPI(app)
-	threadID = None
-	if request.form.get('threadID'):
-		threadID = modules.getModel(models.Thread, threadid=request.form.get('threadID')).unique_thread_id
-	response = googleAPI.sendEmail(email = app.google_email, access_token = access_token, to_address = d['to_address'], subject = d.get('subject', ''), bcc_address = d.get('bcc_address', ''), html = html, text = request.form.get('text', ''), threadID = threadID)
-	email = db.session.query(models.Email).filter_by(id=e['email_id']).first()
-	email.google_message_id = response['id']
-	email.from_address = app.google_email
-	thread_created = False
-	while not thread_created:
-		random_thread = 'tt'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(9))
-		thread, thread_created = modules.get_or_create(models.Thread, threadid=random_thread, unique_thread_id = response['threadId'], origin='google', app_id = app.id, defaults = {'first_made':datetime.now()})
-	email.google_thread_id = response['threadId']
-	email.thread_id = thread.id
-	email.date_sent = datetime.utcnow()
-	db.session.commit()
-	j = jsonify(success=True, links=links, cleaned_html=str(soup), email=e, threadid = random_thread)
-	j.set_cookie('LATrackingID', value=appid, max_age=None, expires=datetime.now()+timedelta(days=365))
-	session['LATrackingID'] = appid
-	return j
+	return jsonify(**modles.sendEmailFromController(request.form))
 
 
 
@@ -656,7 +571,7 @@ def emailStats():
 	try:
 		a = modules.getModel(models.App, appid=request.form.get('appid')).id
 	except:
-		return jsonify(fuck="off")
+		return jsonify()
 	ids = db.session.query(models.Email).with_entities(models.Email.id).filter(models.Email.emailid.in_(emailids)).all()
 	num_emails = float(len(ids))
 	if num_emails == 0:
@@ -675,14 +590,17 @@ def cadenceInfo():
 	emailids = [a.strip() for a in request.form.get('emailids').split(',')]
 	try:
 		a = modules.getModel(models.App, appid=request.form.get('appid')).id
-	except:
-		return jsonify(fuck="off")
+	except Exception as e:
+		return jsonify()
 	dates = {}
 	utc_now = datetime.utcnow()
 	emailids = emailids
 	now = datetime.utcnow()+timedelta(hours=int(request.form.get('offset', -8)))
-	emails_orm = db.session.query(models.Email).with_entities(models.Email.id, models.Email.date_sent).filter(models.Email.emailid.in_(emailids)).all()
-	emails = [(e.id, e.date_sent) for e in emails_orm if e.id and e.date_sent]
+	if emailids == ['']:
+		emails = []
+	else:
+		emails_orm = db.session.query(models.Email).with_entities(models.Email.id, models.Email.date_sent).filter(models.Email.emailid.in_(emailids)).all()
+		emails = [(e.id, e.date_sent) for e in emails_orm if e.id and e.date_sent]
 	for e in emails:
 		date_formatted = datetime.strftime(e[1], '%m/%d/%Y')
 		if date_formatted not in dates: dates[date_formatted] = []
@@ -734,8 +652,63 @@ def getRandomEmails():
 
 @application.route('/check',methods=['GET'])
 def check():
-	modles.handleApp('aaQ7WENBPBQ')
+	# modles.handleApp('aaQ7WENBPBQ') # kylie@legionanalytics.com
+	modles.handleApp('aaDKE34H8TD') # sinan.u.ozdemir@gmail.com
 	return jsonify()
+	# texts = []
+	# a = modles.appGoogleAPI(modules.getModel(models.App, appid='aaQ7WENBPBQ'))
+	# for m in  googleAPI.getUsedLabels(a)['labels']:
+	# 	if m['name'] in ['learn more']:
+	# 		threads = googleAPI.getMessagesMarkedWithLabel(a, m['id'])
+	# 		for t in threads['messages']:
+	# 			_thread = modules.getModel(models.Thread, unique_thread_id=t['threadId'])
+	# 			for e in _thread.emails:
+	# 				if e.text:
+	# 					texts.append(e.text)
+	# texts = list(set(texts))
+	# print json.dumps(texts)
+
+	# texts = ["Kylie,\r\n\r\nThanks for the email, can you tell me how you do prospecting? I sell \r\ndomain names and would want to create lists of relevant companies for \r\nthe keyword domains I own. Is that something you can do?\r\n\r\n\r\nThanks,\r\nJohn\r\n", "Monday at 4 I am pre-booked. However, I am happy to have my CEO give you a\r\ncall to answer any of your questions.\r\n\r\nI will send over an invite now.\r\n\r\nHave a great weekend, Valeria!", "Thanks for getting back to me Jay. I would think that the best way to use\r\nLegion Analytics would be to use out automated outreach to create a drip\r\ncampaign for your 30K+ leads to ensure they dont fall out of the funnel.\r\n\r\nAn interesting approach to using Legion Analytics for Vacasa could also be\r\nto find professionals in stressful jobs in urban areas that need Vacation\r\nrentals and reaching out to them. We would be able to provide the contact\r\ndata for those people.\r\n\r\nI'd be happy to set up a time where you can speak to my CEO next week\r\n\r\nHow's Monday at 11am PT work for you?\r\n\r\nBest,\r\nKylie", "Hi Kylie,\r\n\r\nVidible was acquired more than a year ago by AOL (\r\nwww.aolplatforms.com/blog/aol-expands-global-scale-video-distribution-discovery-and-management-through-acquisition)\r\nand is now a part of the broader One by AOL (www.aolplatforms.com/onebyaol)\r\nsuite of products.\r\n\r\nI'm unsure of our sales automation needs at the present time, however if\r\nyou have a deck further describing your platform's capabilities and\r\nhighlighting differences from some of your competitors I'm happy to share\r\nwith the team to see if there is interest.\r\n\r\nThanks\r\n\r\nVipul", "Possibly yes, let's schedule a call. How about Monday afternoon around 4?\r\n\u1427", "Hi Valeria,\r\n\r\nLegion Analytics provides sales automation and lead generation for your\r\ncompany to improve the efficiencies of your sales process. When you sign up\r\nwith Legion, you are able to create a lead list based on specific criteria.\r\nWe will find potential leads that we will provide you on a daily basis. We\r\nalso offer email automation for you to set up drip campaigns for leads that\r\nwe provided as well as leads that you acquired through other channels.\r\n\r\nIs this something that you think would work for Prizma's sales/outreach\r\nmodel?\r\n\r\n-Kylie", "Great to hear. How does a call with my CEO tomorrow or Thursday look at 1pm\r\nET?", "What do you do?\r\n\r\n[CareSync]\r\n\r\nMARK NALYWAJKO / CareSync<http://www.caresync.com/> / National Sales Director\r\nmark.nalywajko@caresync.com<mailto:mark.nalywajko@caresync.com>   813.731.2961  @caresync\r\n\r\nJoin us for one of our upcoming Chronic Care Management webinars<http://info.caresync.com/webinars>!\r\n\r\n\r\nFrom: \"kylie@legionanalytics.com<mailto:kylie@legionanalytics.com>\" <kylie@legionanalytics.com<mailto:kylie@legionanalytics.com>>\r\nDate: Tuesday, March 8, 2016 at 2:20 PM\r\nTo: Mark Nalywajko <Mark.Nalywajko@caresync.com<mailto:Mark.Nalywajko@caresync.com>>\r\nSubject: Biz dev tool for CareSync\r\n\r\nMark,\r\n\r\nCareSync came across my desk yesterday as a potential company aggressively growing revenue this quarter. Would you be interested in jumping on a 10 minute phone call with me to explore how my company, Legion Analytics<https://www.latracking.com/r/llJB6DNMH1V> (ai sales automation platform), could help your team be more efficient in bringing on new customers?\r\n\r\nIf you're not the right person to speak to, would you mind forwarding me to someone more appropriate?\r\n\r\nThank you for your help,\r\nKylie\r\n\r\np.s. If Legion Analytics isn't right for you and you don't want to hear from me, just reply to let me know. [https://www.latracking.com/e/eeY8BWPJ7XY]\r\n", "Thanks for getting back to me Jay. I would think that the best way to use \r\nLegion Analytics would be to use out automated outreach to create a drip \r\ncampaign for your 30K+ leads to ensure they dont fall out of the funnel. \r\n\r\nAn interesting approach to using Legion Analytics for Vacasa could also be \r\nto find professionals in stressful jobs in urban areas that need Vacation \r\nrentals and reaching out to them. We would be able to provide", "Kylie,\r\n\r\nI'd be interested in learning more. Let me know a good time to talk!\r\n\r\nBest,\r\nChristine", "Hi Kylie,\r\n\r\nThanks for the response.  I'm not too optimistic that you can do something\r\nthat we aren't already doing.  But again, I'm happy to chat.  I'm free any\r\ntime on Wed, Thurs, Friday.\r\n\r\nJay", "What exactly do you do?\r\n\u1427", "Depends... did legion analytics help you find me?\r\n\r\nHow did the process work?\r\n\r\nBen", "Hi Kylie,\r\n\r\nTo be honest, we're still very early in our growth strategies. Based on\r\nyour description, I wouldn't even know how you could help us as we don't\r\nwork with marketing agencies or IT companies. Best of luck to you!\r\n\r\nBest,\r\nToby\r\n------------------------------\r\n\r\nBusiness Development & Partnerships, GoFundMe\r\n\r\n*The easy way to raise money online.*\r\n\r\nWe're changing the way the world gives!\r\n*Get inspired at:* GoFundMe <http://www.gofundme.com/>", " \r\n\r\nHi Kylie, \r\nThe biggest problem is the time. I don't have now.  \r\nSend me an initial presentation so  can go through next week. I will be\r\nin a Expo so I will have a little bit of time.  \r\n\r\nThen send me an email on March 21st so we can see, if I survive after\r\nthe Expo and when we can talk. \r\n\r\nBest, \r\nWilliam Liani \r\n\r\n---\r\n\r\nBusiness Development Manager \r\nDepositphotos\r\n\r\nUS Mobile: +1 (516) 554-7063\r\nIT Mobile: +39 347 77 37 640\r\nSkypeID: william.depositphotos", "Hello Kylie,\r\n\r\nI do not see how this would help a mortgage operation...\r\n\r\nThanks,\r\n\r\nLucas", "Thursday at 1pm EST would work great!", "Great! I will send over an invite for 11am PT on Wednesday.\r\n", "Hi Kylie,\r\n\r\nYou reached out to Karinda a few weeks ago about lead generation.  I'd be\r\nthe guy who'd 'sell' it to the CEO.  He's makes 100% of the financial\r\ndecisions.  I highly doubt we could use your services though, but I'm\r\nalways open to ideas.  Currently, we have 30,000 leads that are still\r\nrotating through our lead system.\r\n\r\n-- \r\n\r\nJay Klein | Outbound Sales Manager\r\n\r\n503.334.0380 (w) | 541-228-8053 (c)\r\n\r\njklein@vacasa.com <frodo@vacasa.com>\r\n\r\nvacasa.com\r\n\r\nVacation rentals made easy\u00ae\r\n\r\nMy top priority is ensuring owner and guest happiness.\r\n", "What is this all about?  I don't understand.\r\n\r\nBest,\r\n\r\nStephanie\r\n\r\nStephanie Wiley | *Business Development*\r\n\r\n\r\n*Direct Line: 916-307-4198Main Line: 916-443-6668 ext. 219*\r\n*Fax: 916-443-0376*\r\n*Email:* swiley@necal.bbb.org\r\n*www.bbb.org <http://www.bbb.org/>* | *Start With Trust*\r\n\r\nBBB of Northeast California\r\n3075 Beacon Blvd\r\nWest Sacramento, CA 95691\r\n\r\n*Find us on:* *Facebook <http://www.facebook.com/necalbbb> *and *Twitter\r\n<http://www.twitter.com/bbbnecal>*", "Sounds good, thank you!\r\n\u1427"]
+	# q = []
+	# for t in texts:
+	# 	for question in re.finditer('[\'\w\/\s]+\?', t.lower()):
+	# 		print question.group(0).strip()
+	# 		print
+	# return jsonify()
+	# data = {}
+	# data['html'] = "test" # insert ML here
+	# data['subject'] = 'test subject'
+	# data['to_address'] = 'sinan@legionanalytics.com'
+	# data['appid'] = 'aaQ7WENBPBQ'
+	# print data
+	# print modles.sendEmailFromController(data)
+	_thread, t_c = modules.get_or_create(models.Thread, unique_thread_id='1537b9892e709768')
+	g = {}
+	g['text'] = 'unsubscribe'
+	
+	if _thread.latracking_reply: #trigger our auto reply
+		response = None
+		print "auto replying to it"
+		data = {}
+		for label, keys in prediction_dict.iteritems():
+			if sum([l in g['text'].lower() for l in keys]) > 0:
+				response = random.choice(response_dict[label])
+		if response:
+			data['html'] = response_template.replace('{{insert_response_here}}', response)
+			data['subject'] = _thread.emails[-1].subject
+			data['to_address'] = 'sinan@legionanalytics.com'
+			data['appid'] = 'aaQ7WENBPBQ'
+			data['threadID'] = _thread.unique_thread_id
+			print data
+			modles.sendEmailFromController(data)
+		else:
+			pass
+			# label with needs a human
+	# modles.handleApp('aaQ7WENBPBQ') # kylie@legionanalytics.com
+	# modles.handleApp('aaDKE34H8TD') # sinan.u.ozdemir@gmail.com
+	# print googleAPI.cleanMessage({"internalDate": "1457970468000", "historyId": "320982", "payload": {"mimeType": "text/html", "headers": [{"name": "Delivered-To", "value": "kylie@legionanalytics.com"}, {"name": "Received", "value": "by 10.76.172.201 with SMTP id be9csp37024oac;        Mon, 14 Mar 2016 08:47:48 -0700 (PDT)"}, {"name": "X-Received", "value": "by 10.202.228.10 with SMTP id b10mr13735718oih.32.1457970468817;        Mon, 14 Mar 2016 08:47:48 -0700 (PDT)"}, {"name": "Return-Path", "value": "<bounce+9a3794.f3c631-kylie=legionanalytics.com@mg.legionanalytics.com>"}, {"name": "Received", "value": "from rs224.mailgun.us (rs224.mailgun.us. [209.61.151.224])        by mx.google.com with ESMTPS id a8si16403694obt.51.2016.03.14.08.47.48        for <kylie@legionanalytics.com>        (version=TLS1_2 cipher=ECDHE-RSA-AES128-GCM-SHA256 bits=128/128);        Mon, 14 Mar 2016 08:47:48 -0700 (PDT)"}, {"name": "Received-SPF", "value": "pass (google.com: domain of bounce+9a3794.f3c631-kylie=legionanalytics.com@mg.legionanalytics.com designates 209.61.151.224 as permitted sender) client-ip=209.61.151.224;"}, {"name": "Authentication-Results", "value": "mx.google.com;       spf=pass (google.com: domain of bounce+9a3794.f3c631-kylie=legionanalytics.com@mg.legionanalytics.com designates 209.61.151.224 as permitted sender) smtp.mailfrom=bounce+9a3794.f3c631-kylie=legionanalytics.com@mg.legionanalytics.com;       dkim=pass header.i=@mg.legionanalytics.com"}, {"name": "DKIM-Signature", "value": "a=rsa-sha256; v=1; c=relaxed/relaxed; d=mg.legionanalytics.com; q=dns/txt; s=smtp; t=1457970468; h=Content-Transfer-Encoding: Mime-Version: Content-Type: Subject: From: To: Message-Id: Date: Sender; bh=ts9hGocgcK6BgnFK0wtad9wI568/2S3nB2pgs0qcJM0=; b=iZ6CmcINthBUcDLq90nBY6guSiZ/Xlsk6kmlrv40KDjB0Mtk8144Fx1oSgsmJusql8W0r+gk /I1cZqq+SzqlgE46HREUnFhjltp76Lwqx46YOMxUCDF9ujYhE3Xa5QII3CCxdYbQlRkzS6Vq jAWNwX/Jd9ay1HDIwhvtztzMsNI="}, {"name": "DomainKey-Signature", "value": "a=rsa-sha1; c=nofws; d=mg.legionanalytics.com; s=smtp; q=dns; h=Sender: Date: Message-Id: To: From: Subject: Content-Type: Mime-Version: Content-Transfer-Encoding; b=ZBPZrYaznnS3gDSMWCmMAfwExbmVR1SE7mXN3rbr5CaXcVDne0e/Wo5fHJpY9MLIVcPr4B l24KZvFX2vA2KJkUQaD61Wb1Wa+rSM4FMmm7sWbSI/6/l7Wl8jMbDDivRNeSOZoZAztEVZBK CuoQy5nKYWifoCzg2W0+KGNBitxMU="}, {"name": "Sender", "value": "youvegotleads@mg.legionanalytics.com"}, {"name": "Date", "value": "Mon, 14 Mar 2016 15:47:48 +0000"}, {"name": "X-Mailgun-Sid", "value": "WyJjYjI1ZiIsICJreWxpZUBsZWdpb25hbmFseXRpY3MuY29tIiwgImYzYzYzMSJd"}, {"name": "Received", "value": "by luna.mailgun.net with HTTP; Mon, 14 Mar 2016 15:47:48 +0000"}, {"name": "Message-Id", "value": "<20160314154748.9505.84422@mg.legionanalytics.com>"}, {"name": "To", "value": "kylie@legionanalytics.com"}, {"name": "From", "value": "Legion Analytics <youvegotleads@mg.legionanalytics.com>"}, {"name": "Subject", "value": "You've Got Leads!"}, {"name": "Content-Type", "value": "text/html; charset=\"ascii\""}, {"name": "Mime-Version", "value": "1.0"}, {"name": "Content-Transfer-Encoding", "value": "7bit"}], "body": {"data": "DQoJPGh0bWw-DQoJPGJvZHk-R29vZCBNb3JuaW5nIQ0KCTxicj4NCgk8YnI-DQoJTm8gTXIgQm9uZC4uLiBJIGV4cGVjdCB5b3UgdG8gY2xvc2UNCgk8YnI-DQoJPGJyPk9uIHRoYXQgbm90ZSBJIGhhdmUgc29tZSBuZXcgbGVhZHMgZm9yIHlvdSEgQ2hlY2sgdGhlbSBvdXQgPGEgaHJlZj0iaHR0cDovL2VtYWlsLm1nLmxlZ2lvbmFuYWx5dGljcy5jb20vYy9lSnh0anNFS2d6QVFSTF9HSE1OdU5sbjFrRU12X1kyeVRWSU5qVm8wSVA1OXBiMEtjeGptTWNORV82TEFoQ3A3QThoQWFOSFoxbmE2ZC1CMFo2MHhqWVZwMENVTmVabGxsbkxVSERZZGxrbU5ubHNrWmdKSjJIZUU4S1FZblRDZ3RNNG1EcXI0c2RiUDF0Q3RNZmRULTc1ZlRaM2tuXzZNeE1kVzF5U1RXdjM3S0RtZEZ5NUtYMGU4TzdZIiB0YXJnZXQ9Il9ibGFuayI-aGVyZTwvYT48YnI-PEJyPg0KCUlmIHlvdSBhcmUgdW5hYmxlIHRvIGxvZyBpbiBvciBuZWVkIGEgbmV3IHBhc3N3b3JkLCBjbGljayA8YSBocmVmPSJodHRwOi8vZW1haWwubWcubGVnaW9uYW5hbHl0aWNzLmNvbS9jL2VKeHRqVEVPaENBVVJFOGpKZUZfUHFBRnhUWjdEMEZRc2lnYkpTSGVma20yTlpsaU1tOHlzOWdvdlpiQWtrVUJXa2dnVUdSbzVKTVNpbzlFaUFPSmZlVTVyS2tjOHpIbnV5Wl9jVjkydHRsZ0lBWWxvM2VUUXpPTkdneEpCT2RRZTZrWHg3TGRhdjFlZzN3Ti1PNXFyVDFOZGZKUHU0bmxYRXRscF8zY09ZWC1fdERfQVdwRE9tYyIgdGFyZ2V0PSJfYmxhbmsiPmhlcmU8L2E-PGJyPjxicj4NCglIYXZlIGEgZ3JlYXQgZGF5ITxCcj4NCglZb3VyIEZyaWVuZHMgQCBMZWdpb24gQW5hbHl0aWNzPGJyPjxicj4NCglQc3N0ISBHb3QgYW55IHF1ZXN0aW9ucz8gRW1haWwgdXMgYXQgeW91cmZyaWVuZHNAbGVnaW9uYW5hbHl0aWNzLmNvbQ0KCTxpbWcgd2lkdGg9IjFweCIgaGVpZ2h0PSIxcHgiIGFsdD0iIiBzcmM9Imh0dHA6Ly9lbWFpbC5tZy5sZWdpb25hbmFseXRpY3MuY29tL28vZUp4dHpNRU53akFNQmRCcHlER0s3ZV9pSGpKTUhaSVNrYllTY09uMlpRRGVBTy1SbTVSSktQVE1pYVlrQkZMY1lYSFdwTkVBNWh2U3RzWlIxMzdzeTc2TTg5dkxKNVpqQzg5YzNXY0RXMEZMNmc2UkNwZ29lWE5pYWVHZFgtZm85WGY4Q1M2c0dTWDUiPjwvYm9keT4NCg0KCTwvaHRtbD4NCgkNCg==", "size": 1135}, "partId": "", "filename": ""}, "snippet": "Good Morning! No Mr Bond... I expect you to close On that note I have some new leads for you! Check", "sizeEstimate": 3670, "threadId": "15375cfd798ba64d", "labelIds": ["CATEGORY_UPDATES", "UNREAD"], "id": "15375cfd798ba64d"})
+	return jsonify()
+
 	import lml
 
 	hierarchy = {
@@ -754,7 +727,8 @@ def check():
 	}
 
 	in_depth_hierarchy = {
-		'reply':['date', 'coordinate date', 'set up calendar invite', 'more info'],
+		# 'positive':['more info', 'interested'],
+		# 'negative':['unsubscribe'],
 		'date':['coordinate date', 'set up calendar invite'],
 		'coordinate date': ['coordinate date'],
 		'set up calendar invite': ['set up calendar invite'],
@@ -1144,8 +1118,33 @@ def check():
 	training_set = {}
 	for t, l in zip(saved['texts'], saved['labels']):
 		if l not in training_set: training_set[l] = []
+		t = t.replace('\n',' ')
+		t = t.replace('\t',' ')
+		t = t.replace('\r',' ')
+		t = t.replace('  ',' ')
+		t = t.replace('  ',' ')
+		t = t.replace('  ',' ')
+		t = t.replace('  ',' ')
+		t = t.replace('  ',' ')
+		
 		training_set[l].append(t)
-	print training_set['no longer here']
+	# print training_set['not interested']
+
+	texts, labels = [], []
+	for overall, sub in in_depth_hierarchy.iteritems():
+		for s in sub:
+			print overall, s
+
+			texts += training_set.get(s, [])
+			labels += [overall]*len(training_set.get(s, []))
+
+	m = lml.MyTextClassifier(ngram_range = (1,3))
+	m.fit(texts, labels)
+	# print m.analyze()
+
+	print m.predict_proba('''I am very interested''')
+	print m.predict_proba('''unsubscribe''')
+	print m.predict_proba('''remove me from your list''')
 
 
 
