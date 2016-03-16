@@ -36,7 +36,7 @@ def checkForReplies(app_id, user_email, thread, access_token, from_ = 'google'):
 		sent_through_latracking = len([a.app_id for a in thread_emails if a.app_id]) > 0
 		messages = googleAPI.getThreadMessages(thread.unique_thread_id, access_token)
 		if len(messages) == len(thread_emails):
-			print  "no new messages"
+			# print  "no new messages"
 			return
 		for message in messages:
 			try:
@@ -75,6 +75,7 @@ def checkForReplies(app_id, user_email, thread, access_token, from_ = 'google'):
 			if email_created and g['to_address'].lower() == user_email.lower() and g.get('text') and g.get('from_address'):
 				text_to_respond_to = g['text']
 				from_address = g['from_address']
+				email_id = email_in_db.id
 
 		if thread.latracking_reply and text_to_respond_to: #trigger our auto reply
 			print "responding to ", text_to_respond_to
@@ -89,6 +90,7 @@ def checkForReplies(app_id, user_email, thread, access_token, from_ = 'google'):
 				data['to_address'] = from_address
 				data['appid'] = app_id
 				data['threadID'] = thread.unique_thread_id
+				data['replied_to'] = email_id
 				print "auto replying to it", data
 				sendEmailFromController(data)
 			else:
@@ -167,7 +169,8 @@ def sendEmailFromController(email_dict):
 	access_token = appGoogleAPI(app)
 	threadID = None
 	if email_dict.get('threadID'):
-		threadID = modules.getModel(models.Thread, unique_thread_id=email_dict.get('threadID')).unique_thread_id
+		tt = modules.getModel(models.Thread, unique_thread_id=email_dict.get('threadID'))
+		threadID = tt.unique_thread_id
 	response = googleAPI.sendEmail(email = app.google_email, access_token = access_token, to_address = d['to_address'], subject = d.get('subject', ''), bcc_address = d.get('bcc_address', ''), html = html, text = email_dict.get('text', ''), threadID = threadID)
 	email = db.session.query(models.Email).filter_by(id=e['email_id']).first()
 	email.google_message_id = response['id']
@@ -179,7 +182,12 @@ def sendEmailFromController(email_dict):
 	if 'kylie' in app.google_email and 'sinan' in email_dict['to_address']:
 		thread.latracking_reply = True
 	email.google_thread_id = response['threadId']
+	if email_dict.get('replied_to'):
+		email.replied_to = email_dict.get('replied_to')
 	email.thread_id = thread.id
+	if email_dict.get('threadID'):
+		email.google_thread_id = email_dict['threadID']
+		email.thread_id = tt.id
 	email.date_sent = datetime.utcnow()
 	db.session.commit()
 	return {'success':True, 'links':links, 'cleaned_html':str(soup), 'email':e, 'threadid':random_thread}

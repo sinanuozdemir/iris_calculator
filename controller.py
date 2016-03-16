@@ -652,8 +652,8 @@ def getRandomEmails():
 
 @application.route('/check',methods=['GET'])
 def check():
-	# modles.handleApp('aaQ7WENBPBQ') # kylie@legionanalytics.com
-	modles.handleApp('aaDKE34H8TD') # sinan.u.ozdemir@gmail.com
+	modles.handleApp('aaQ7WENBPBQ') # kylie@legionanalytics.com
+	# modles.handleApp('aaDKE34H8TD') # sinan.u.ozdemir@gmail.com
 	return jsonify()
 	# texts = []
 	# a = modles.appGoogleAPI(modules.getModel(models.App, appid='aaQ7WENBPBQ'))
