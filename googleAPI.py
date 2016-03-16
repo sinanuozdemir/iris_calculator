@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import time
 import re
 from bs4 import BeautifulSoup as bs
@@ -153,11 +154,17 @@ def cleanMessage(m):
 	new_m['emailid'] = 'ee'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(9))
 	try:
 		_bounce = detectBouncedEmailFromMessage(new_m)
-	except:
+	except Exception as bounce_error:
 		_bounce = None
+		print bounce_error, "bounce_error", new_m
+
 	new_m['bounced_email'] = _bounce
 	new_m['bounce'] = _bounce is not None
-	new_m['auto_reply'] = detectAutoReply(new_m)
+	try:
+		new_m['auto_reply'] = detectAutoReply(new_m)
+	except Exception as auto_error:
+		new_m['auto_reply'] = False
+		print auto_error, "auto_error", new_m
 	return {k:v for k, v in new_m.iteritems() if v is not None and v != '' and v != []}
 
 def archiveThread(access_token, threadId):
