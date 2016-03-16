@@ -37,7 +37,7 @@ def checkForReplies(app_id, user_email, thread, access_token, from_ = 'google'):
 		messages = googleAPI.getThreadMessages(thread.unique_thread_id, access_token)
 		if len(messages) == len(thread_emails):
 			print  "no new messages"
-			# return
+			return
 		for message in messages:
 			try:
 				g = googleAPI.cleanMessage(message)
