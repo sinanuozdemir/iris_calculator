@@ -1175,7 +1175,7 @@ class Scheduler(object):
 
 
 application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
-DEBUG = False
+DEBUG = True
 
 if not DEBUG:
 	@application.before_first_request
