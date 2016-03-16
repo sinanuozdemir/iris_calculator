@@ -13,13 +13,17 @@ import string
 website_re = re.compile("(https?://)?(www.)?([^\.]+)([\.\w]+)/?((\w+/?)*(\?[\w=]+)?)", re.IGNORECASE)
 
 
-response_template = '''<span style="color: rgb(34, 34, 34); font-size: small; background-color: inherit;">{{insert_response_here}}'''
+response_template = '''{{insert_response_here}}<br><br><br>Best,<br>Kylie'''
 prediction_dict = {
-	'unsubscribe':['unsubscribe', "remove me", "take me off"]
-
+	'unsubscribe':['unsubscribe', "remove me", "take me off", "stop spamming", "spam", "stop emailing me", 'not interested', "please stop"],
+	'learn_more': ['could you send me more info', 'what do you do', "how can you help me", "pass along to my manager", "send me a summary"],
+	"follow_up": ['reach out in Q']
 }
+
 response_dict = {
-	'unsubscribe': ['I am so sorry to bother you! I will remove you from the list immediately.']
+	'unsubscribe': ['I am sorry to bother you. You have been removed from our list of contacts.', 'My apologies. I will take you off my list of potential prospects. Enjoy the rest of your day.', 'I am so sorry to bother you! I will remove you from the list immediately.'],
+	'learn_more':['Thank you for getting back to me. I’m happy to provide more info.<br><br>Legion Analytics empowers sales reps to book more opportunities with less effort by providing fully automated drip campaigns that are consistently populated with net-new prospects by Legion. Create a lead list with demographic filters (Job Title, Industry, Revenue, Location, Keywords, etc) and set up your drip campaign to get started. Legion will then find net-new prospects that fit your demographic criteria and automatically email them per your drip campaign rules. It’s that easy. Once set up, let it run and get interested prospects’ responses in your inbox.<br><br>Would you be interested in a demo with one of our account managers next week?', "I’m happy to provide a summary.<br><br>Legion Analytics empowers sales reps to book more opportunities with less effort by providing fully automated drip campaigns that are consistently populated with net-new prospects by Legion. Create a lead list with demographic filters (Job Title, Industry, Revenue, Location, Keywords, etc) and set up your drip campaign to get started. Legion will then find net-new prospects that fit your demographic criteria and automatically email them per your drip campaign rules. It’s that easy. Once set up, let it run and get interested prospects’ responses in your inbox.<br><br>If you need more information, I’d be happy to coordinate a demo with one of our account managers. How does your next Tuesday look at 11am PT look?"],
+	'follow_up':["Sure thing. <br><br>I’ll set a reminder to follow up with you in July. In the mean time, visit some of our <a href='https://www.legionanalytics.com'>free resources</a> for great sales tools you can use."]
 }
 
 def appGoogleAPI(app):
@@ -81,7 +85,7 @@ def checkForReplies(app_id, user_email, thread, access_token, from_ = 'google'):
 			print "responding to ", text_to_respond_to
 			response = None
 			for label, keys in prediction_dict.iteritems():
-				if sum([l in text_to_respond_to.lower() for l in keys]) > 0:
+				if sum([l.lower() in text_to_respond_to.lower() for l in keys]) > 0:
 					response = random.choice(response_dict[label])
 			if response:
 				data = {}
@@ -179,7 +183,7 @@ def sendEmailFromController(email_dict):
 	while not thread_created:
 		random_thread = 'tt'+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(9))
 		thread, thread_created = modules.get_or_create(models.Thread, threadid=random_thread, unique_thread_id = response['threadId'], origin='google', app_id = app.id, defaults = {'first_made':datetime.now()})
-	if 'kylie' in app.google_email and 'sinan' in email_dict['to_address']:
+	if ('demi' in app.google_email or 'kylie' in app.google_email) and ('sinan' in email_dict['to_address'] or 'jamasen' in email_dict['to_address']):
 		thread.latracking_reply = True
 	email.google_thread_id = response['threadId']
 	if email_dict.get('replied_to'):
