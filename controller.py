@@ -667,7 +667,11 @@ def getRandomEmails():
 
 @application.route('/check',methods=['GET'])
 def check():
-	modles.handleRandomApp()
+	# modles.handleRandomApp()
+	for a in db.session.query(models.App).all():
+		a.last_checked_inbox = None
+		a.next_check_inbox = None
+	db.session.commit()
 	
 	# modles.handleApp('aaQ7WENBPBQ') # kylie@legionanalytics.com
 	# modles.handleApp('aaDKE34H8TD') # sinan.u.ozdemir@gmail.com
@@ -1197,7 +1201,7 @@ DEBUG = False
 if not DEBUG:
 	@application.before_first_request
 	def startScheduler():
-		scheduler = Scheduler(5, modles.handleRandomApp)
+		scheduler = Scheduler(30, modles.handleRandomApp)
 		scheduler.start()
 
 

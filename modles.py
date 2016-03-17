@@ -34,7 +34,7 @@ def appGoogleAPI(app):
 		db.session.commit()
 	return app.google_access_token
 
-def checkForReplies(app_id, user_email, thread, access_token, from_ = 'google'):
+def checkForReplies(app_unique_id, app_id, user_email, thread, access_token, from_ = 'google'):
 	text_to_respond_to = None
 	if from_ == 'google':
 		thread_emails = thread.emails
@@ -50,6 +50,7 @@ def checkForReplies(app_id, user_email, thread, access_token, from_ = 'google'):
 				print clean_error, "clean_error"
 				continue
 			g['thread_id'] = thread.id	
+			g['inbox_id'] = app_unique_id
 			if len(thread.emails) > 0:
 				g['replied_to'] = sorted(thread.emails, key = lambda x: x.date_sent)[-1].id
 			elif g['auto_reply']: #  "IS AN AUTOREPLY"
@@ -208,25 +209,40 @@ def sendEmailFromController(email_dict):
 def handleApp(appid = None):
 	if not appid: return False
 	a = db.session.query(models.App).filter_by(appid=appid).first()
+	a.currently_being_handled = True
+	db.session.commit()
 	print "handling app", appid
+	a_id = a.id
 	access_token = appGoogleAPI(a)
 	threads = googleAPI.getThreads(access_token, a.google_email)
 	for thread in threads:
-		_thread, t_c = modules.get_or_create(models.Thread, unique_thread_id=thread['id'])
+		_thread, t_c = modules.get_or_create(models.Thread, unique_thread_id=thread['id'], defaults={'app_id':a_id})
 		try:
-			checkForReplies(appid, a.google_email, _thread, access_token)
+			checkForReplies(a.id, appid, a.google_email, _thread, access_token)
 		except Exception as ee:
 			print ee, "check_for_replies_error"
+	a.last_checked_inbox = datetime.utcnow()
+	a.next_check_inbox = datetime.utcnow()+timedelta(minutes=a.frequency_of_check)
+	a.currently_being_handled = False
+	db.session.commit()
 	return {'status':'done', 'appid':appid}
 
 def handleRandomApp():
-	try:
-		u = random.sample(db.session.query(models.App.appid).all(), 1)[0][0]
-		handleApp(u)
-	except Exception as random_eror:
-		pass
-	return True
+	a = getAppToHandle()
+	if a:
+		handleApp(a)
+		return True
+	return False
 
+
+def getAppToHandle():
+	never_handled = [a[0] for a in db.session.query(models.App.appid).filter_by(last_checked_inbox=None).all()]
+	if len(never_handled) > 0: #apps exist that ahve never been checked:
+		return random.choice(never_handled)
+	apps_in_range = db.session.query(models.App.next_check_inbox, models.App.appid).filter_by(currently_being_handled=False).filter(models.App.next_check_inbox<datetime.utcnow()).all()
+	if len(apps_in_range) > 0:
+		return sorted(apps_in_range)[0][1]
+	return None
 
 
 

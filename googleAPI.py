@@ -199,7 +199,9 @@ def getThreadMessages(threadId, access_token):
 	url = 'https://www.googleapis.com/gmail/v1/users/me/threads/'+threadId
 	headers = {}
 	headers['authorization'] = 'Bearer ' + access_token
-	messages = requests.get(url, headers = headers).json()['messages']
+	response = requests.get(url, headers = headers).json()
+	if 'messages' not in response: return []
+	messages = response['messages']
 	try:
 		messages = sorted(messages, key = lambda x:x['internalDate'])
 	except Exception as sorted_error:

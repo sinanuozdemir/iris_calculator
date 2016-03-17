@@ -36,8 +36,11 @@ class App(db.Model):
 	google_access_token = db.Column(db.Text(), index=True)
 	google_refresh_token = db.Column(db.Text(), index=True)
 	user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+	last_checked_inbox = db.Column(db.DateTime(), default = None)
+	next_check_inbox = db.Column(db.DateTime(), default = None)
+	frequency_of_check = db.Column(db.Integer, default = 20)
+	currently_being_handled = db.Column(db.Boolean, default = False)
 	user = relationship("User", uselist=False, backref="app")
-	emails = relationship('Email', backref='app')
 	threads = relationship('Thread', backref='app')
 	def __repr__(self):
 		return '<App %r>' % (self.appid)
@@ -112,6 +115,7 @@ class Email(db.Model):
 	legion_cadence_id = db.Column(db.Integer, nullable=True)
 	legion_template_id = db.Column(db.Integer, nullable=True)
 	app_id = db.Column(db.Integer, db.ForeignKey("app.id"), nullable=True)
+	inbox_id = db.Column(db.Integer, db.ForeignKey("app.id"), nullable=True)
 	thread_id = db.Column(db.Integer, db.ForeignKey("thread.id"), nullable=True)
 
 class Link(db.Model):
