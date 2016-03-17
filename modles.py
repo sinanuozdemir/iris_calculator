@@ -193,6 +193,10 @@ def sendEmailFromController(email_dict):
 	if email_dict.get('threadID'):
 		email.google_thread_id = email_dict['threadID']
 		email.thread_id = tt.id
+	if 'legion_cadence_id' in email_dict:
+		email.legion_cadence_id = int(email_dict['legion_cadence_id'])
+	if 'legion_template_id' in email_dict:
+		email.legion_template_id = int(email_dict['legion_template_id'])
 	email.date_sent = datetime.utcnow()
 	db.session.commit()
 	return {'success':True, 'links':links, 'cleaned_html':str(soup), 'email':e, 'threadid':random_thread}

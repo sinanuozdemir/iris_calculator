@@ -109,8 +109,8 @@ class Email(db.Model):
 	date_sent = db.Column(db.DateTime())
 	links = relationship('Link', backref='email')
 	replied_to = db.Column(db.Integer, db.ForeignKey("email.id"), nullable=True)
-	# sent = db.Column(db.Boolean, index=False, default=False)
-	# scheduled_for = db.Column(db.DateTime())
+	legion_cadence_id = db.Column(db.Integer, nullable=True)
+	legion_template_id = db.Column(db.Integer, nullable=True)
 	app_id = db.Column(db.Integer, db.ForeignKey("app.id"), nullable=True)
 	thread_id = db.Column(db.Integer, db.ForeignKey("thread.id"), nullable=True)
 

@@ -563,15 +563,8 @@ def getNotifications():
 def handleApp(i):
 	modles.handleApp(i)
 
-
-
-@application.route('/emailStats',methods=['POST'])
-def emailStats():
-	emailids = [a.strip() for a in request.form.get('emailids').split(',')]
-	try:
-		a = modules.getModel(models.App, appid=request.form.get('appid')).id
-	except:
-		return jsonify()
+def _statsfromemailids(emails):
+	emailids = [a.strip() for a in emails.split(',')]
 	ids = db.session.query(models.Email).with_entities(models.Email.id).filter(models.Email.emailid.in_(emailids)).all()
 	num_emails = float(len(ids))
 	if num_emails == 0:
@@ -585,27 +578,48 @@ def emailStats():
 	return jsonify(bounce_rate=round(bounces/num_emails, 2), open_rate=round(opens/num_emails, 2), click_rate=round(clicks/num_emails, 2), reply_rate=round(replies/num_emails, 2))
 
 
+# ADDD does not work yet
+def _statsfromtemplate(legion_template_id):
+	opens = db.session.query(models.Visit).distinct(models.Visit.email_id).with_entities(models.Visit.id).filter(models.Visit.email_id.legion_template_id==legion_template_id).count()
+	replies = db.session.query(models.Email).distinct(models.Email.replied_to).with_entities(models.Email.replied_to).filter(and_(models.Email.bounce==False, models.Email.legion_template_id == legion_template_id)).count()
+	bounces = db.session.query(models.Email).distinct(models.Email.replied_to).with_entities(models.Email.replied_to).filter(and_(models.Email.bounce==True, models.Email.legion_template_id == legion_template_id)).count()
+	all_links = db.session.query(models.Link).with_entities(models.Link.id).filter(models.Link.email_id.in_(ids)).all()
+	clicks = db.session.query(models.Visit).distinct(models.Visit.link_id).filter(models.Visit.link_id.in_(all_links)).count()
+	return jsonify(bounce_rate=round(bounces/num_emails, 2), open_rate=round(opens/num_emails, 2), click_rate=round(clicks/num_emails, 2), reply_rate=round(replies/num_emails, 2))
+
+
+@application.route('/emailStats',methods=['POST'])
+def emailStats():
+	try:
+		a = modules.getModel(models.App, appid=request.form.get('appid')).id
+	except:
+		return jsonify()
+	if 'emailids' in request.form:
+		return _statsfromemailids(request.form['emailids'])
+	elif 'legion_template_id' in request.form:
+		return _statsfromtemplate(request.form['legion_template_id'])
+	return jsonify()
+
+
+
 @application.route('/cadenceInfo',methods=['POST'])
 def cadenceInfo():
-	emailids = [a.strip() for a in request.form.get('emailids').split(',')]
 	try:
 		a = modules.getModel(models.App, appid=request.form.get('appid')).id
 	except Exception as e:
 		return jsonify()
 	dates = {}
 	utc_now = datetime.utcnow()
-	emailids = emailids
 	now = datetime.utcnow()+timedelta(hours=int(request.form.get('offset', -8)))
-	if emailids == ['']:
-		emails = []
-	else:
-		emails_orm = db.session.query(models.Email).with_entities(models.Email.id, models.Email.date_sent).filter(models.Email.emailid.in_(emailids)).all()
-		emails = [(e.id, e.date_sent) for e in emails_orm if e.id and e.date_sent]
+	cadence_ids = request.form.get('cadence_ids', '').split(',')
+	emails_orm = db.session.query(models.Email).with_entities(models.Email.id, models.Email.date_sent).filter(models.Email.legion_cadence_id.in_(cadence_ids)).all()
+	emails = [(e.id, e.date_sent) for e in emails_orm if e.id and e.date_sent]
 	for e in emails:
 		date_formatted = datetime.strftime(e[1], '%m/%d/%Y')
 		if date_formatted not in dates: dates[date_formatted] = []
 		dates[date_formatted].append(e[0])
 	ids = [a[0] for a in emails]
+	
 	num_emails = float(len(ids))
 	all_opens = db.session.query(models.Visit).filter(models.Visit.email_id.in_(ids)).all()
 	most_recent_opens = [('open', s.email.to_address, ((utc_now-s.date).seconds), ((utc_now-s.date).seconds/60), ((utc_now-s.date).seconds/3600), s.email.subject) for s in sorted(all_opens, key = lambda x:x.date)[-10:]][::-1]
@@ -622,7 +636,8 @@ def cadenceInfo():
 	all_replies = db.session.query(models.Email).filter(and_(models.Email.replied_to.in_(ids), models.Email.bounce==False))
 	most_recent_replies = [('reply', s.from_address, ((utc_now-s.date_sent).seconds), ((utc_now-s.date_sent).seconds/60), ((utc_now-s.date_sent).seconds/3600), s.subject) for s in sorted(all_replies, key = lambda x:x.date_sent)[-10:]][::-1]
 	all_replies = {e.replied_to:1 for e in all_replies}
-	
+
+
 	stats = {'dates': {}}
 	for day in modules.date_range(now-timedelta(days=7), now):
 		_day = datetime.strftime(day, '%m/%d/%Y')
@@ -652,7 +667,9 @@ def getRandomEmails():
 
 @application.route('/check',methods=['GET'])
 def check():
-	modles.handleApp('aaQ7WENBPBQ') # kylie@legionanalytics.com
+	modles.handleRandomApp()
+	
+	# modles.handleApp('aaQ7WENBPBQ') # kylie@legionanalytics.com
 	# modles.handleApp('aaDKE34H8TD') # sinan.u.ozdemir@gmail.com
 	return jsonify()
 	# texts = []
