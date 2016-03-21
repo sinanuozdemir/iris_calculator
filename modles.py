@@ -214,6 +214,7 @@ def handleApp(appid = None):
 	print "handling app", appid
 	a_id = a.id
 	access_token = appGoogleAPI(a)
+	if not access_token: return {'status':'failed', 'reason': 'access_token came back none'}
 	threads = googleAPI.getThreads(access_token, a.google_email)
 	for thread in threads:
 		_thread, t_c = modules.get_or_create(models.Thread, unique_thread_id=thread['id'], defaults={'app_id':a_id})
@@ -228,10 +229,13 @@ def handleApp(appid = None):
 	return {'status':'done', 'appid':appid}
 
 def handleRandomApp():
-	a = getAppToHandle()
-	if a:
-		handleApp(a)
-		return True
+	try:
+		a = getAppToHandle()
+		if a:
+			handleApp(a)
+			return True
+	except Exception as random_error:
+		print random_error, "random_error"
 	return False
 
 
@@ -240,6 +244,7 @@ def getAppToHandle():
 	if len(never_handled) > 0: #apps exist that ahve never been checked:
 		return random.choice(never_handled)
 	apps_in_range = db.session.query(models.App.next_check_inbox, models.App.appid).filter_by(currently_being_handled=False).filter(models.App.next_check_inbox<datetime.utcnow()).all()
+	print apps_in_range
 	if len(apps_in_range) > 0:
 		return sorted(apps_in_range)[0][1]
 	return None
