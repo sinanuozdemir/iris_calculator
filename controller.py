@@ -385,6 +385,15 @@ def test():
 ##############################
 
 # makes a new user based on google auth data
+@application.route('/checkApp',methods=['POST'])
+def checkApp():
+	try:
+		a = modules.getModel(models.App, appid=request.form.get('appid'))
+	except:
+		return jsonify(success=False)
+	return jsonify(success=True, is_valid=a.google_access_token is not None)
+
+# makes a new user based on google auth data
 @application.route('/makeNewUser',methods=['POST'])
 def makeNewUser():
 	d = {}
@@ -395,6 +404,13 @@ def makeNewUser():
 	a, user_id, app_created = getAppIDForEmail(d['google_email'], d)
 	if app_created:
 		e, created = modules.get_or_create(models.App, appid=a, website_id = 1, user_id=user_id, **d)
+	else:
+		existing_app = db.session.query(models.App).filter_by(appid=a).first()
+		if 'google_access_token' in d:
+			existing_app.google_access_token = d['google_access_token']
+		if 'google_refresh_token' in d:
+			existing_app.google_refresh_token = d['google_refresh_token']
+		db.session.commit()
 	return jsonify(success=True, appid=a)
 
 # gets appd for a given email, if it doesn't exist, itll make one
@@ -709,20 +725,21 @@ def getRandomEmails():
 
 @application.route('/check',methods=['GET'])
 def check():
-	texts, labels = [], []
-	a = modles.appGoogleAPI(modules.getModel(models.App, appid='aaQ7WENBPBQ'))
-	for m in  googleAPI.getUsedLabels(a)['labels']:
-		threads = googleAPI.getMessagesMarkedWithLabel(a, m['id'])
-		for t in threads.get('messages', []):
-			try:
-				_thread = modules.getModel(models.Thread, unique_thread_id=t['threadId'])
-				for e in _thread.emails:
-					if e.text:
-						texts.append(e.text)
-						labels.append(m['name'])
-			except:
-				pass
-	print json.dumps({'texts':texts, 'labels':labels})
+	# texts, labels = [], []
+	# a = modles.appGoogleAPI(modules.getModel(models.App, appid='aaQ7WENBPBQ'))
+	# for m in  googleAPI.getUsedLabels(a)['labels']:
+	# 	threads = googleAPI.getMessagesMarkedWithLabel(a, m['id'])
+	# 	for t in threads.get('messages', []):
+	# 		try:
+	# 			_thread = modules.getModel(models.Thread, unique_thread_id=t['threadId'])
+	# 			for e in _thread.emails:
+	# 				if e.text:
+	# 					texts.append(e.text)
+	# 					labels.append(m['name'])
+	# 		except:
+	# 			pass
+	# print json.dumps({'texts':texts, 'labels':labels})
+	print modles.appGoogleAPI(modules.getModel(models.App, id=67))
 	return jsonify()
 	
 

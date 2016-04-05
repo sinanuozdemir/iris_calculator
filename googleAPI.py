@@ -20,18 +20,6 @@ import cgi
 
 SIMPLE_EMAIL_REGEX = '(([a-zA-Z0-9][\w\.-]+)@([a-z-_A-Z0-9\.]+)\.(\w\w\w?))'
 
-'''
-INPUT : google auth token
-OUTPUT: bool
-	T -> auth token is good to go
-	F -> auth token is not good to go
-'''
-def goodGoogleAuth(token):
-	try:
-		r = requests.get('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=%s'%token)
-		return 'error' not in r.json()
-	except:
-		return False
 
 def getEmailFromText(t):
 	try:
@@ -95,18 +83,7 @@ def detectBouncedEmailFromMessage(d):
 		return 'unknown'
 	return None
 
-def getGoogleAccessToken(refresh_token):
-	r = requests.post('https://www.googleapis.com/oauth2/v3/token', data = {
-	'client_secret': 'VQ2sIQGhXH-ue6olCgUY9L3g',
-	'client_id': '994895035422-bes5cqbhmf140j906598j1q91pvcnn08.apps.googleusercontent.com',
-	'refresh_token': refresh_token,
-	'grant_type': 'refresh_token'
-	})
-	response = r.json()
-	try:
-		return response['access_token']
-	except:
-		return None
+
 
 def MakeshiftSentiment(text):
 	text = text.lower().strip()
@@ -254,8 +231,38 @@ def getMessage(messageId, access_token, att):
 
 	return message
 
+def getGoogleAccessToken(refresh_token):
+	print refresh_token
+	r = requests.post('https://www.googleapis.com/oauth2/v3/token', data = {
+	'client_secret': 'VQ2sIQGhXH-ue6olCgUY9L3g',
+	'client_id': '994895035422-bes5cqbhmf140j906598j1q91pvcnn08.apps.googleusercontent.com',
+	'refresh_token': refresh_token,
+	'grant_type': 'refresh_token'
+	})
+	response = r.json()
+	print response
+	try:
+		return response['access_token']
+	except:
+		return None
+
+
+'''
+INPUT : google auth token
+OUTPUT: bool
+	T -> auth token is good to go
+	F -> auth token is not good to go
+'''
+def goodGoogleAuth(token):
+	try:
+		r = requests.get('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=%s'%token)
+		return 'error' not in r.json()
+	except:
+		return False
+
 def refreshAccessToken(access, refresh):
 	if not goodGoogleAuth(access):
+		print "not good"
 		access = getGoogleAccessToken(refresh)
 	return access
 
