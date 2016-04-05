@@ -410,6 +410,7 @@ def makeNewUser():
 			existing_app.google_access_token = d['google_access_token']
 		if 'google_refresh_token' in d:
 			existing_app.google_refresh_token = d['google_refresh_token']
+		existing_app.currently_being_handled = False
 		db.session.commit()
 	return jsonify(success=True, appid=a)
 
