@@ -642,10 +642,11 @@ def _statsfromtemplate(legion_template_id):
 
 @application.route('/emailStats',methods=['POST'])
 def emailStats():
-	try:
-		a = modules.getModel(models.App, appid=request.form.get('appid')).id
-	except:
-		return jsonify()
+	# try:
+	# 	a = modules.getModel(models.App, appid=request.form.get('appid')).id
+	# except Exception as ee:
+	# 	print ee, "emailstatserror"
+	# 	return jsonify()
 	if 'emailids' in request.form:
 		return _statsfromemailids(request.form['emailids'])
 	elif 'legion_template_id' in request.form:
