@@ -244,7 +244,6 @@ def getAppToHandle():
 	if len(never_handled) > 0: #apps exist that ahve never been checked:
 		return random.choice(never_handled)
 	apps_in_range = db.session.query(models.App.next_check_inbox, models.App.appid).filter_by(currently_being_handled=False).filter(models.App.next_check_inbox<datetime.utcnow()).all()
-	print apps_in_range
 	if len(apps_in_range) > 0:
 		return sorted(apps_in_range)[0][1]
 	return None

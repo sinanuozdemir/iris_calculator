@@ -2,12 +2,19 @@ from sqlalchemy.orm import relationship, sessionmaker, backref
 from controller import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+import json
 
+class TextForML(db.Model):
+	__tablename__ = 'textforml'
+	id = db.Column(db.Integer, primary_key=True)
+	raw_text = db.Column(db.Text())
+	text_class = db.Column(db.String(64))
+	sentiment = db.Column(db.Float)
 
 class MLModel(db.Model):
 	__tablename__ = 'mlmodel'
 	id = db.Column(db.Integer, primary_key=True)
-	model = db.Column(db.PickleType(pickler='json'), index = False)
+	json_model = db.Column(db.PickleType(pickler='json'), index = False)
 	ml_model = db.Column(db.PickleType(pickler='cPickle.pickle'), index = False)
 
 class Domain(db.Model):

@@ -232,7 +232,6 @@ def getMessage(messageId, access_token, att):
 	return message
 
 def getGoogleAccessToken(refresh_token):
-	print refresh_token
 	r = requests.post('https://www.googleapis.com/oauth2/v3/token', data = {
 	'client_secret': 'VQ2sIQGhXH-ue6olCgUY9L3g',
 	'client_id': '994895035422-bes5cqbhmf140j906598j1q91pvcnn08.apps.googleusercontent.com',
@@ -240,7 +239,6 @@ def getGoogleAccessToken(refresh_token):
 	'grant_type': 'refresh_token'
 	})
 	response = r.json()
-	print response
 	try:
 		return response['access_token']
 	except:
@@ -262,7 +260,6 @@ def goodGoogleAuth(token):
 
 def refreshAccessToken(access, refresh):
 	if not goodGoogleAuth(access):
-		print "not good"
 		access = getGoogleAccessToken(refresh)
 	return access
 

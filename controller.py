@@ -723,25 +723,31 @@ def getRandomEmails():
 	emails = random.sample(db.session.query(models.Email).filter_by(to_address='jamasen@legionanalytics.com').all(), int(request.args.get('num', 20)))
 	return jsonify(texts=[e.text for e in emails])
 
-
+# "aaQKNO9G7WS" jamasen
+# "aaQ7WENBPBQ" kylie
 
 @application.route('/check',methods=['GET'])
 def check():
-	# texts, labels = [], []
-	# a = modles.appGoogleAPI(modules.getModel(models.App, appid='aaQ7WENBPBQ'))
-	# for m in  googleAPI.getUsedLabels(a)['labels']:
-	# 	threads = googleAPI.getMessagesMarkedWithLabel(a, m['id'])
-	# 	for t in threads.get('messages', []):
-	# 		try:
-	# 			_thread = modules.getModel(models.Thread, unique_thread_id=t['threadId'])
-	# 			for e in _thread.emails:
-	# 				if e.text:
-	# 					texts.append(e.text)
-	# 					labels.append(m['name'])
-	# 		except:
-	# 			pass
-	# print json.dumps({'texts':texts, 'labels':labels})
-	print modles.appGoogleAPI(modules.getModel(models.App, id=67))
+	from text_classifier import TextPredictor
+	t = TextPredictor()
+	return jsonify(**t.predict(request.args['s'], how=request.args['how']))
+	
+
+	texts, labels = [], []
+	a = modles.appGoogleAPI(modules.getModel(models.App, appid='aaQKNO9G7WS'))
+	for m in  googleAPI.getUsedLabels(a)['labels']:
+		print m['id']
+		threads = googleAPI.getMessagesMarkedWithLabel(a, m['id'])
+		for t in threads.get('messages', []):
+			try:
+				_thread = modules.getModel(models.Thread, unique_thread_id=t['threadId'])
+				for e in _thread.emails:
+					if e.text and ('kylie' not in e.from_address and 'sinan' not in e.from_address and 'jamasen' not in e.from_address):
+						texts.append(e.text)
+						labels.append(m['name'])
+			except:
+				pass
+	print json.dumps({'texts':texts, 'labels':labels})
 	return jsonify()
 	
 
