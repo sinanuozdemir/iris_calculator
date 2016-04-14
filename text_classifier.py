@@ -1,5 +1,6 @@
 try:
 	import numpy as np
+	import nn
 except: 
 	pass
 
@@ -10,7 +11,6 @@ import string
 from itertools import groupby, izip, permutations
 from controller import db
 import models
-import nn
 
 class TextPredictor():
 	def __init__(self):
