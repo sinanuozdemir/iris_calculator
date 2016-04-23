@@ -186,6 +186,7 @@ class TextPredictor():
 			sentence_done['overall_prediction'] = max(overall.items(), key = lambda x:x[1])
 			result['sentences'].append(sentence_done)
 		result['prediction_by_sentence'] = [(s['text'], s['overall_prediction'][0]) for s in result['sentences']]
+		result['overall_single_prediction'] = Counter([a[1] for a in result['prediction_by_sentence']]).most_common(1)[0][0]
 		return result
 
 

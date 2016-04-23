@@ -2,7 +2,6 @@ from sqlalchemy.orm import relationship, sessionmaker, backref
 from controller import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
-import json
 
 class TextForML(db.Model):
 	__tablename__ = 'textforml'
@@ -47,6 +46,7 @@ class App(db.Model):
 	next_check_inbox = db.Column(db.DateTime(), default = None)
 	frequency_of_check = db.Column(db.Integer, default = 20)
 	currently_being_handled = db.Column(db.Boolean, default = False)
+	settings = db.Column(db.String(1024), index=False, unique=False)
 	user = relationship("User", uselist=False, backref="app")
 	threads = relationship('Thread', backref='app')
 	def __repr__(self):
@@ -92,6 +92,8 @@ class Thread(db.Model):
 	unique_thread_id = db.Column(db.String(128), index=True) # the google/outlook thread id
 	all_parties_replied = db.Column(db.Boolean, index=False, default=False)
 	latracking_reply = db.Column(db.Boolean, index=False, default=False)
+	auto_tag = db.Column(db.Boolean, index=False, default=False)
+	already_tagged = db.Column(db.Boolean, index=False, default=False)
 	people_in_conversation = db.Column(db.Integer, default = 0)
 	last_checked = db.Column(db.DateTime())
 	first_made = db.Column(db.DateTime())

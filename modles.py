@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import json
 import re
 from datetime import datetime, timedelta	
 import time
@@ -10,9 +11,10 @@ import models
 import modules
 from bs4 import BeautifulSoup as bs
 import string
+from text_classifier import TextPredictor
 
 website_re = re.compile("(https?://)?(www.)?([^\.]+)([\.\w]+)/?((\w+/?)*(\?[\w=]+)?)", re.IGNORECASE)
-
+t = TextPredictor()
 
 response_template = '''{{insert_response_here}}<br><br><br>Best,<br>Kylie'''
 prediction_dict = {
@@ -34,15 +36,20 @@ def appGoogleAPI(app):
 		db.session.commit()
 	return app.google_access_token
 
-def checkForReplies(app_unique_id, app_id, user_email, thread, access_token, from_ = 'google'):
+def checkForReplies(app_unique_id, app_id, user_email, thread, access_token, app_settings, from_ = 'google'):
 	text_to_respond_to = None
 	if from_ == 'google':
 		thread_emails = thread.emails
 		sent_through_latracking = len([a.app_id for a in thread_emails if a.app_id]) > 0
+		legion_cadence, legion_template = None, None
+		for a in thread_emails:
+			if a.legion_cadence_id: legion_cadence = a.legion_cadence_id
+			if a.legion_template_id: legion_template = a.legion_template_id
+		# print thread, sent_through_latracking, legion_cadence, legion_template
 		messages = googleAPI.getThreadMessages(thread.unique_thread_id, access_token)
 		if len(messages) == len(thread_emails):
 			# print  "no new messages"
-			return
+			return None
 		for message in messages:
 			try:
 				g = googleAPI.cleanMessage(message)
@@ -78,30 +85,14 @@ def checkForReplies(app_unique_id, app_id, user_email, thread, access_token, fro
 
 
 			email_in_db, email_created = modules.get_or_create(models.Email, google_message_id=g['google_message_id'], defaults = g)
-			if email_created and g['to_address'].lower() == user_email.lower() and g.get('text') and g.get('from_address'):
+			if email_created and g.get('to_address', '').lower() == user_email.lower() and g.get('text') and g.get('from_address'):
 				text_to_respond_to = g['text']
 				from_address = g['from_address']
 				email_id = email_in_db.id
+		return text_to_respond_to
+		
 
-		if thread.latracking_reply and text_to_respond_to: #trigger our auto reply
-			print "responding to ", text_to_respond_to
-			response = None
-			for label, keys in prediction_dict.iteritems():
-				if sum([l.lower() in text_to_respond_to.lower() for l in keys]) > 0:
-					response = random.choice(response_dict[label])
-			if response:
-				data = {}
-				data['html'] = response_template.replace('{{insert_response_here}}', response)
-				data['subject'] = thread.emails[-1].subject
-				data['to_address'] = from_address
-				data['appid'] = app_id
-				data['threadID'] = thread.unique_thread_id
-				data['replied_to'] = email_id
-				print "auto replying to it", data
-				sendEmailFromController(data)
-			else:
-				pass
-				# maybe label with needs a human
+		
 
 
 def _makeDBLink(email_id, text, url, appid):
@@ -209,19 +200,59 @@ def sendEmailFromController(email_dict):
 def handleApp(appid = None):
 	if not appid: return False
 	a = db.session.query(models.App).filter_by(appid=appid).first()
+	try:
+		app_settings = json.loads(a.settings)
+	except:
+		app_settings = {}
+	
 	a.currently_being_handled = True
 	db.session.commit()
 	print "handling app", appid
 	a_id = a.id
 	access_token = appGoogleAPI(a)
 	if not access_token: return {'status':'failed', 'reason': 'access_token came back none'}
-	threads = googleAPI.getThreads(access_token, a.google_email)
+	threads = googleAPI.getThreads(access_token, a.last_checked_inbox)
+	print len(threads), "threads"
+	
 	for thread in threads:
 		_thread, t_c = modules.get_or_create(models.Thread, unique_thread_id=thread['id'], defaults={'app_id':a_id})
 		try:
-			checkForReplies(a.id, appid, a.google_email, _thread, access_token)
+			last_text = checkForReplies(a.id, appid, a.google_email, _thread, access_token, app_settings)
 		except Exception as ee:
 			print ee, "check_for_replies_error"
+			last_text = None
+			continue
+
+		if not _thread.already_tagged and last_text and 'auto_tag' in app_settings:
+			if app_settings['auto_tag'] == 'all' \
+			or legion_cadence in app_settings['auto_tag'].get('cadences', []) \
+			or legion_template in app_settings['auto_tag'].get('templates', []):
+				print "tagging text %s"%(last_text)
+				prediction = t.predict(last_text, how='bayes')
+				if 'overall_single_prediction' in prediction:
+					googleAPI.addLabelToThread(access_token, _thread.unique_thread_id, prediction['overall_single_prediction'])
+				_thread.already_tagged = True
+				db.session.commit()
+
+		if _thread.latracking_reply and last_text: #trigger our auto reply
+			print "responding to ", last_text
+			response = None
+			for label, keys in prediction_dict.iteritems():
+				if sum([l.lower() in last_text.lower() for l in keys]) > 0:
+					response = random.choice(response_dict[label])
+			if response:
+				last_email = _thread.emails[-1]
+				data = {}
+				data['html'] = response_template.replace('{{insert_response_here}}', response)
+				data['subject'] = last_email.subject
+				data['to_address'] = last_email.from_address
+				data['appid'] = appid
+				data['threadID'] = _thread.unique_thread_id
+				data['replied_to'] = last_email.id
+				print "auto replying to it", data
+				sendEmailFromController(data)
+
+
 	a.last_checked_inbox = datetime.utcnow()
 	a.next_check_inbox = datetime.utcnow()+timedelta(minutes=a.frequency_of_check)
 	a.currently_being_handled = False

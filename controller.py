@@ -389,7 +389,8 @@ def test():
 def checkApp():
 	try:
 		a = modules.getModel(models.App, appid=request.form.get('appid'))
-	except:
+	except Exception as eee:
+		print eee, "checkapp error"
 		return jsonify(success=False)
 	return jsonify(success=True, is_valid=a.google_access_token is not None)
 
@@ -725,29 +726,11 @@ def getRandomEmails():
 
 # "aaQKNO9G7WS" jamasen
 # "aaQ7WENBPBQ" kylie
+# "aaDKE34H8TD" sinan.u.
 
 @application.route('/check',methods=['GET'])
 def check():
-	from text_classifier import TextPredictor
-	t = TextPredictor()
-	return jsonify(**t.predict(request.args['s'], how=request.args['how']))
-	
-
-	texts, labels = [], []
-	a = modles.appGoogleAPI(modules.getModel(models.App, appid='aaQKNO9G7WS'))
-	for m in  googleAPI.getUsedLabels(a)['labels']:
-		print m['id']
-		threads = googleAPI.getMessagesMarkedWithLabel(a, m['id'])
-		for t in threads.get('messages', []):
-			try:
-				_thread = modules.getModel(models.Thread, unique_thread_id=t['threadId'])
-				for e in _thread.emails:
-					if e.text and ('kylie' not in e.from_address and 'sinan' not in e.from_address and 'jamasen' not in e.from_address):
-						texts.append(e.text)
-						labels.append(m['name'])
-			except:
-				pass
-	print json.dumps({'texts':texts, 'labels':labels})
+	# modles.handleApp('aaQ7WENBPBQ')
 	return jsonify()
 	
 
@@ -792,5 +775,24 @@ if __name__ == '__main__':
 
 
 
+
+
+## GET MESSAGES WITH LABELS
+	# texts, labels = [], []
+	# a = modles.appGoogleAPI(modules.getModel(models.App, appid='aaQKNO9G7WS'))
+	# for m in  googleAPI.getUsedLabels(a)['labels']:
+	# 	print m['id']
+	# 	threads = googleAPI.getMessagesMarkedWithLabel(a, m['id'])
+	# 	for t in threads.get('messages', []):
+	# 		try:
+	# 			_thread = modules.getModel(models.Thread, unique_thread_id=t['threadId'])
+	# 			for e in _thread.emails:
+	# 				if e.text and ('kylie' not in e.from_address and 'sinan' not in e.from_address and 'jamasen' not in e.from_address):
+	# 					texts.append(e.text)
+	# 					labels.append(m['name'])
+	# 		except:
+	# 			pass
+	# print json.dumps({'texts':texts, 'labels':labels})
+	# return jsonify()
 
 

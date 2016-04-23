@@ -11,6 +11,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import requests
 import cgi
+from datetime import datetime, timedelta	
+
 
 
 
@@ -155,6 +157,37 @@ def archiveThread(access_token, threadId):
 	message = requests.post(url, headers = headers, data = data).json()
 	return message
 
+def addLabelToThread(access_token, threadId, thread_label):
+	url = 'https://www.googleapis.com/gmail/v1/users/me/threads/'+threadId+'/modify'
+	headers = {}
+	headers['content-type'] = 'application/json'
+	headers['authorization'] = 'Bearer ' + access_token
+	data = {}
+	label_id = getLabelByName(access_token, thread_label)
+	if label_id is None:
+		label_id = makeLabel(access_token, thread_label)
+	data['addLabelIds']=[label_id]
+	data = json.dumps(data)
+	message = requests.post(url, headers = headers, data = data).json()
+	return message
+
+def getLabelByName(access_token, name):
+	for m in  getUsedLabels(access_token)['labels']:
+		if m['name'].lower() == name.lower(): return m['id']
+	return None
+
+def makeLabel(access_token, name):
+	url = 'https://www.googleapis.com/gmail/v1/users/me/labels'
+	headers = {}
+	data = {}
+	headers['content-type'] = 'application/json'
+	headers['authorization'] = 'Bearer ' + access_token
+	data['name'] = name
+	data['labelListVisibility'] = 'labelShow'
+	data['messageListVisibility'] = 'show'
+	message = requests.post(url, headers = headers, data = json.dumps(data)).json()
+	return message['id']
+
 def getUsedLabels(access_token):
 	url = 'https://www.googleapis.com/gmail/v1/users/me/labels'
 	headers = {}
@@ -186,40 +219,22 @@ def getThreadMessages(threadId, access_token):
 	return messages
 
 
-def getThreads(access_token, email):
+def getThreads(access_token, date = None):
 	headers = {}
 	headers['authorization'] = 'Bearer ' + access_token
-	next_page = '1'
 	threads = []
-	num = 2 # gets two pages worth of threads directly sent to this person, thats 200 of them
-	# specifically gets threads aimed at user
-	while next_page is not None:
-		if next_page == '1':
-			url = 'https://www.googleapis.com/gmail/v1/users/me/threads?maxResults=100&q=to:'+email
-		else:
-			url = 'https://www.googleapis.com/gmail/v1/users/me/threads?maxResults=100&pageToken='+next_page+'&q=to:'+email
-		response = requests.get(url, headers = headers).json()
-		next_page = response.get('nextPageToken')
+	num = 10
+	url = 'https://www.googleapis.com/gmail/v1/users/me/threads'
+	if date: url += '?q="newer:'+datetime.strftime(date, "%Y/%m/%d")
+	response = requests.get(url, headers = headers).json()
+	if 'threads' in response:
+		threads += response['threads']
+	while date is None and num > 0:
+		next_page_token = response['nextPageToken']
+		response = requests.get(url+'?nextPageToken='+next_page_token, headers = headers).json()
 		if 'threads' in response:
 			threads += response['threads']
-		time.sleep(2)
-		num -=1
-		if num <=0: break
-
-	num = 2 # gets two pages worth of threads, thats 200 of them
-	# gets threads in general
-	while next_page is not None:
-		if next_page == '1':
-			url = 'https://www.googleapis.com/gmail/v1/users/me/threads?maxResults=100'
-		else:
-			url = 'https://www.googleapis.com/gmail/v1/users/me/threads?maxResults=100&pageToken='+next_page
-		response = requests.get(url, headers = headers).json()
-		next_page = response.get('nextPageToken')
-		if 'threads' in response:
-			threads += response['threads']
-		time.sleep(2)
-		num -=1
-		if num <=0: break
+		num -= 1
 	return threads
 
 
