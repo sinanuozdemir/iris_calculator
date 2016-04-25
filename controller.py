@@ -730,7 +730,7 @@ def getRandomEmails():
 
 @application.route('/check',methods=['GET'])
 def check():
-	handleApp("aaDKE34H8TD")
+	# handleApp("aaDKE34H8TD")
 	# bad_emails = []
 	# for i in ['unsubscribe', 'take me off', 'remove me', 'list', 'not interested']:
 	# 	emails = db.session.query(models.Email).filter(models.Email.to_address.in_(['kylie@legionanalytics.com', 'demi@legionanalytics', 'jamasen@legionanalytics.com'])).filter(models.Email.text.ilike('%'+i+'%')).all()
