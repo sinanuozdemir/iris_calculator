@@ -272,16 +272,21 @@ def getThreads(access_token, date = None):
 	url = 'https://www.googleapis.com/gmail/v1/users/me/threads'
 	hours = str(int(math.ceil((datetime.utcnow()-date).total_seconds()/3600.)))
 	if date: url += '?q=newer_than:%sh'%(hours)
+	else: url += '?q=newer_than:1y'
 	response = requests.get(url, headers = headers).json()
 	if 'threads' in response:
-		threads += response['threads']
-	while date is None and num > 0:
+		threads += [t['id'] for t in response['threads']]
+	seen = []
+	while num > 0 and 'nextPageToken' in response:
 		next_page_token = response['nextPageToken']
-		response = requests.get(url+'?nextPageToken='+next_page_token, headers = headers).json()
+		
+		response = requests.get(url+'&nextPageToken='+next_page_token, headers = headers).json()
 		if 'threads' in response:
-			threads += response['threads']
+			threads += [t['id'] for t in response['threads']]
+		if next_page_token in seen: break
+		seen.append(next_page_token)
 		num -= 1
-	return threads
+	return list(set(threads))
 
 
 def getMessage(messageId, access_token, att):

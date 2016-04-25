@@ -59,7 +59,7 @@ def checkForReplies(app_unique_id, app_id, user_email, thread, access_token, app
 			g['inbox_id'] = app_unique_id
 			if len(thread.emails) > 0:
 				g['replied_to'] = sorted(thread.emails, key = lambda x: x.date_sent)[-1].id
-				
+
 			elif g['auto_reply']: #  "IS AN AUTOREPLY"
 				email = None
 				try: email = sorted(db.session.query(models.Email).filter_by(from_address=g['to_address'], to_address=g['from_address']).all(), key=lambda x:x.date_sent)[-1]
@@ -213,19 +213,22 @@ def handleApp(appid = None):
 	print "handling app", appid
 	a_id = a.id
 	access_token = appGoogleAPI(a)
-	if not access_token: return {'status':'failed', 'reason': 'access_token came back none'}
+	if not access_token: 
+		a.currently_being_handled = False
+		db.session.commit()
+		return {'status':'failed', 'reason': 'access_token came back none'}
 	threads = googleAPI.getThreads(access_token, a.last_checked_inbox)
 	print len(threads), "threads"
-	
+
 	for thread in threads:
-		_thread, t_c = modules.get_or_create(models.Thread, unique_thread_id=thread['id'], defaults={'app_id':a_id})
+		_thread, t_c = modules.get_or_create(models.Thread, unique_thread_id=thread, defaults={'app_id':a_id})
 		try:
 			last_text = checkForReplies(a.id, appid, a.google_email, _thread, access_token, app_settings)
 		except Exception as ee:
 			print ee, "check_for_replies_error"
 			last_text = None
 			continue
-		# return
+
 		if not _thread.already_tagged and last_text and 'auto_tag' in app_settings:
 			if app_settings['auto_tag'] == 'all' \
 			or legion_cadence in app_settings['auto_tag'].get('cadences', []) \
