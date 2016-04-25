@@ -730,7 +730,25 @@ def getRandomEmails():
 
 @application.route('/check',methods=['GET'])
 def check():
-	# modles.handleApp('aaQ7WENBPBQ')
+	handleApp("aaDKE34H8TD")
+	# bad_emails = []
+	# for i in ['unsubscribe', 'take me off', 'remove me', 'list', 'not interested']:
+	# 	emails = db.session.query(models.Email).filter(models.Email.to_address.in_(['kylie@legionanalytics.com', 'demi@legionanalytics', 'jamasen@legionanalytics.com'])).filter(models.Email.text.ilike('%'+i+'%')).all()
+	# 	bad_emails += [e.from_address for e in emails]
+	# print json.dumps(bad_emails)
+	# return jsonify(emails=bad_emails)
+	import requests
+	corpus = requests.get("http://www.gutenberg.org/cache/epub/10/pg10.txt").text
+	# corpus = []
+	# for text_obj in db.session.query(models.TextForML).filter_by(text_class='unsubscribe').all():
+	# 	if text_obj.raw_text: corpus.append(text_obj.raw_text)
+	# email = 'lauren@bitium.com'
+	# for email in db.session.query(models.Email).filter_by(from_address=email, to_address='sinan@legionanalytics.com').all():
+	# 	if email.text:
+	# 		corpus.append(email.text)
+	import text_classifier as t
+	m =  t.getOverallAnalyze(corpus, num = 3)
+	print t.psuedoRandomText(m, seed = 'random', words = 30)
 	return jsonify()
 	
 
@@ -759,6 +777,7 @@ class Scheduler(object):
 
 application.secret_key = 'A0Zr9slfjybdskfs8j/3yX R~XHH!jfjhbsdfjhvbskcgvbdf394574LWX/,?RT'
 DEBUG = False
+
 
 if not DEBUG:
 	@application.before_first_request

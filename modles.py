@@ -229,7 +229,7 @@ def handleApp(appid = None):
 			or legion_template in app_settings['auto_tag'].get('templates', []):
 				print "tagging text %s"%(last_text)
 				prediction = t.predict(last_text, how='bayes')
-				if 'overall_single_prediction' in prediction:
+				if prediction and 'overall_single_prediction' in prediction:
 					googleAPI.addLabelToThread(access_token, _thread.unique_thread_id, prediction['overall_single_prediction'])
 				_thread.already_tagged = True
 				db.session.commit()

@@ -225,7 +225,7 @@ def getThreads(access_token, date = None):
 	threads = []
 	num = 10
 	url = 'https://www.googleapis.com/gmail/v1/users/me/threads'
-	if date: url += '?q="newer:'+datetime.strftime(date, "%Y/%m/%d")
+	if date: url += '?q="newer:'+datetime.strftime(date-timedelta(hours=24), "%Y/%m/%d")
 	response = requests.get(url, headers = headers).json()
 	if 'threads' in response:
 		threads += response['threads']

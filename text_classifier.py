@@ -3,7 +3,7 @@ try:
 	import nn
 except: 
 	pass
-
+import random
 import json
 import re
 from collections import Counter
@@ -11,6 +11,13 @@ import string
 from itertools import groupby, izip, permutations
 from controller import db
 import models
+
+
+def phrases(text, num = 3):
+	words = text.split()
+	for i in range(len(words) - (num-1)):
+		yield [words[a] for a in range(i,i+(num))]
+
 
 class TextPredictor():
 	def __init__(self):
@@ -178,6 +185,8 @@ class TextPredictor():
 				except Exception as e: 
 					pass
 			overall = {}
+			if sentence_done['predictions'] == {}:
+				return None
 			overalls = reduce(lambda x,y: x+y, [v['top_choices'] for v in sentence_done['predictions'].values()])
 			overalls = sorted(overalls, key = lambda x:x[0])
 			for k, v in groupby(overalls, key = lambda x:x[0]):
@@ -190,7 +199,97 @@ class TextPredictor():
 		return result
 
 
+########################
+####### MARKOV #########
+########################
 
+def cleanText(text):
+	text = text.strip().lower()
+	exclude = set(string.punctuation)
+	for e in exclude:
+		text = text.replace(e, ' '+e+' ')
+	
+	text = re.sub(r'\s+', ' ', text)
+	return text
+
+def weighted_choice(choices):
+	total = sum(w for c, w in choices)
+	r = random.uniform(0, total)
+	upto = 0
+	for c, w in choices:
+		if upto + w >= r:
+			return c
+		upto += w
+	assert False, "Shouldn't get here"
+
+
+# input number of words prior counts as present
+def analyzeText(text, num = 1):
+	num += 1
+	#strip punctuations away
+	markov_data = {}
+	text = cleanText(text)
+	for p in phrases(text, num = num):
+		if tuple(p[:num-1]) not in markov_data:
+			markov_data[tuple(p[:num-1])] = []
+		markov_data[tuple(p[:num-1])].append(p[-1])
+
+	for present, future in markov_data.iteritems():
+		all_the_future = float(len(future))
+		markov_data[present] = {k:v/all_the_future for k, v in Counter(future).iteritems()}
+	return markov_data
+
+def getOverallAnalyze(text, num = 5):
+	m = {}
+	for i in range(1, num+1):
+		m[i] = analyzeText(text, num = i)
+	sentence_re = '(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s'
+	firsts = []
+	for sentence in re.split(sentence_re, text):
+		f = sentence.strip().split(' ')[0].lower()
+		if f and len(f) < 20 and f.isalpha(): firsts.append(f)
+	firsts = dict(Counter(firsts))
+	m['firsts'] = firsts
+	return m
+
+
+def predictBasedOnMarkovData(markov_data, word_phrase):
+	word_phrase = cleanText(word_phrase)
+	tup = tuple(word_phrase.split())
+	output = markov_data[len(tup)].get(tup)
+	if not output: return None
+	output = sorted(output.items(), key = lambda x:x[1])
+	return weighted_choice(output)
+	
+
+
+def psuedoRandomText(m, seed = 'random', words = 2):
+	num = max([a for a in m.keys() if type(a) == int])
+	if seed == 'random': 
+		print m['firsts']
+		seed = weighted_choice(m['firsts'].items())
+	seed = cleanText(seed)
+	words_ = list(seed.split())
+	seed = ' '.join(words_[len(words_)-num:])
+	print seed, "SEEEED"
+	while words > 0:
+		prediction = None
+		i = num
+		while i > 1 and prediction is None:
+			seed = ' '.join(words_[len(words_)-i:])
+			prediction = predictBasedOnMarkovData(m, seed)
+			# print seed, '|||', prediction, "seed, prediction"
+			i -= 1
+		# print i, prediction
+		if not prediction: 
+			print "RAN OUT OF WORDS"
+			return ' '.join(words_)
+		words_.append(prediction)
+		
+		
+		words -= 1
+	return ' '.join(words_)
+		
 
 
 
