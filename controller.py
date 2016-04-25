@@ -727,10 +727,13 @@ def getRandomEmails():
 # "aaQKNO9G7WS" jamasen
 # "aaQ7WENBPBQ" kylie
 # "aaDKE34H8TD" sinan.u.
+# "aa2VDYWC34N" lauren@bitium.com
 
 @application.route('/check',methods=['GET'])
 def check():
-	# handleApp("aaDKE34H8TD")
+	handleApp("aaT1IA8EUAO")
+	# print googleAPI.cleanMessage({"internalDate": "1461605775000", "historyId": "1806697", "payload": {"mimeType": "multipart/alternative", "headers": [{"name": "Received", "value": "from 994895035422 named unknown by gmailapi.google.com with HTTPREST; Mon, 25 Apr 2016 10:36:15 -0700"}, {"name": "Content-Type", "value": "multipart/alternative; boundary=\"===============6296652925294419752==\""}, {"name": "MIME-Version", "value": "1.0"}, {"name": "to", "value": "eric@pickyourshoes.com"}, {"name": "from", "value": "jamasen@legionanalytics.com"}, {"name": "subject", "value": "New client for PickYourShoes.com"}, {"name": "Date", "value": "Mon, 25 Apr 2016 10:36:15 -0700"}, {"name": "Message-Id", "value": "<CAB1YTfoJn=W8Xth6rY18mfsNnaDdWa9sd-D8PfQEOCUS4EBUEA@mail.gmail.com>"}], "parts": [{"mimeType": "text/plain", "headers": [{"name": "Content-Type", "value": "text/plain; charset=\"us-ascii\""}, {"name": "MIME-Version", "value": "1.0"}, {"name": "Content-Transfer-Encoding", "value": "7bit"}], "body": {"data": "", "size": 0}, "filename": ""}, {"mimeType": "text/html", "headers": [{"name": "Content-Type", "value": "text/html; charset=\"us-ascii\""}, {"name": "MIME-Version", "value": "1.0"}, {"name": "Content-Transfer-Encoding", "value": "7bit"}], "body": {"data": "RXJpYyw8YnI-PGJyPkkgZm91bmQgeW91ciBzaXRlIHdoZW4gcmVzZWFyY2hpbmcgZm9yIG1hcmtldGluZyBhZ2VuY2llcy4gTXkgY29tcGFueSwgPGEgaHJlZj0iaHR0cHM6Ly93d3cubGF0cmFja2luZy5jb20vci9sbFhGU1JVSTg0SiI-TGVnaW9uIEFuYWx5dGljczwvYT4gaXMgYSBmdWxsLXN0YWNrIHNhbGVzIHBsYXRmb3JtIGJ1aWx0IHRvIGhlbHAgZmluZCBjbGllbnRzIGZvciBhZ2VuY2llcyBsaWtlIHlvdXJzLiBBcmUgeW91IGludGVyZXN0ZWQgaW4gdHJ5aW5nIExlZ2lvbiBmb3IgYSBmZXcgZGF5cyB0byBzZWUgaG93IGl0IGNhbiBmaW5kIG1vcmUgY2xpZW50cyBmb3IgPHNwYW4gc3R5bGU9ImZvbnQtc2l6ZTogMTJweDsgYmFja2dyb3VuZC1jb2xvcjogcmdiKDI1NSwgMjU1LCAyNTUpOyI-UGlja1lvdXJTaG9lcy5jb20_PC9zcGFuPjxicj48YnI-SSBsb29rIGZvcndhcmQgdG8geW91ciByZXBseSw8YnI-SmFtYXNlbiBSb2RyaWd1ZXo8YnI-Rm91bmRlciBAIExlZ2lvbiBBbmFseXRpY3M8YnI-PGJyPjxicj5QLlMuIElmIEknbSB3YXkgb2ZmIGJhc2UgaGVyZSBwbGVhc2UgbGV0IG1lIGtub3cgc28gSSBkb24ndCBjb250aW51ZSBpbnRydWRpbmcgb24geW91ciBpbmJveC48L2JyPjwvYnI-PC9icj48L2JyPjwvYnI-PC9icj48L2JyPjwvYnI-PC9icj48aW1nIHNyYz0iaHR0cHM6Ly93d3cubGF0cmFja2luZy5jb20vZS9lZTRKSVpTRzdOMiIgc3R5bGU9ImhlaWdodDogMXB4OyB3aWR0aDoxcHg7IGRpc3BsYXk6IG5vbmUgIWltcG9ydGFudDsiLz4=", "size": 773}, "partId": "1", "filename": ""}], "body": {"size": 0}, "filename": ""}, "snippet": "Eric, I found your site when researching for marketing agencies. My company, Legion Analytics is a", "sizeEstimate": 1542, "threadId": "1544e7e387a3f2ee", "labelIds": ["SENT"], "id": "1544e7e387a3f2ee"})
+	return
 	# bad_emails = []
 	# for i in ['unsubscribe', 'take me off', 'remove me', 'list', 'not interested']:
 	# 	emails = db.session.query(models.Email).filter(models.Email.to_address.in_(['kylie@legionanalytics.com', 'demi@legionanalytics', 'jamasen@legionanalytics.com'])).filter(models.Email.text.ilike('%'+i+'%')).all()
@@ -748,8 +751,7 @@ def check():
 	# 		corpus.append(email.text)
 	import text_classifier as t
 	m =  t.getOverallAnalyze(corpus, num = 3)
-	print t.psuedoRandomText(m, seed = 'random', words = 30)
-	return jsonify()
+	return jsonify(text=t.psuedoRandomText(m, seed = 'random', words = 30))
 	
 
 class Scheduler(object):

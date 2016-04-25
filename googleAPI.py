@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import base64
 import time
 import re
 from bs4 import BeautifulSoup as bs
@@ -11,6 +12,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import requests
 import cgi
+import math
 from datetime import datetime, timedelta	
 
 
@@ -100,12 +102,45 @@ def MakeshiftSentiment(text):
 		text = re.sub(k, '', text)
 	return score
 
+def decodedToEmailParts(encoded):
+	needed = 4 - len(encoded) % 4
+	encoded += '='*needed
+	parens = encoded.count('=')
+	decoded = None
+	while decoded is None and len(encoded) > 10:
+		try: decoded = base64.urlsafe_b64decode(encoded)
+		except Exception as pre: pass
+		encoded = encoded[:len(encoded)-parens-1]+encoded[len(encoded)-parens:]
+	if decoded is None: return {}
+	is_html = decoded.count('<br>') > 0
+	is_unix = decoded.count('\r') > 0
+	if is_unix:
+		spl = re.split('[\r\n]{4,}', decoded)
+	elif is_html:
+		spl = re.split('[<br>]{8,}', decoded)
+	else: return {}
+
+	cleaned_spl = []
+	for s in spl:
+		if re.search('On \w+, \w+ \d+, \d+ at \d:\d+ [PAM]+, [\s\w]+ <[\@\.\w]+>', s):
+			break
+		elif 'To:' in s and 'From:' in s:
+			break
+		cleaned_spl.append(s)
+	without_signature, signature =  ' '.join(cleaned_spl[:-1]).strip(), cleaned_spl[-1]
+	if is_html:
+		without_signature = bs(without_signature).text
+		signature = bs(signature).text
+	without_signature = re.split('On \w+, \w+ \d+, \d+ at \d:\d+ [PAM]+, [\s\w]+ <[\@\.\w]+>', without_signature)[0].strip()
+
+	return {'without_signature':without_signature, 'signature':signature}
+
 def cleanMessage(m):
 	new_m = {}
 	new_m['google_message_id'] = m.get('id')
 	new_m['google_thread_id'] = m.get('threadId')
-	payload = m['payload']['headers']
-	for p in payload:
+	headers = m['payload']['headers']
+	for p in headers:
 		if p['name'] in ['to', 'Delivered-To', "To"]:
 			new_m['to_address'] = getEmailFromText(p['value'])
 		elif p['name'] in ['from', 'Return-Path', "From"]:
@@ -118,9 +153,19 @@ def cleanMessage(m):
 			new_m['cc_address'] = getEmailFromText(p['value'])
 		elif p['name'] in ['Bcc']:
 			new_m['bcc_address'] = getEmailFromText(p['value'])
+
+
 	payload = m['payload'].get('parts', [])
 	for p in payload:
-		if 'text/plain' in p['mimeType']:
+		if 'multipart/alternative' in p['mimeType']:
+			for p1 in p.get('parts', []):
+				if 'text/plain' in p1['mimeType']:
+					try: new_m.update(decodedToEmailParts(p1['body']['data']))
+					except Exception as eeeee: print eeeee, "decodedToEmailParts error"
+
+		elif ('text/plain' in p['mimeType'] or 'text/html' in p['mimeType']) and p['body']['data']:
+			try: new_m.update(decodedToEmailParts(p['body']['data']))
+			except Exception as eeeee: print eeeee, "decodedToEmailParts error"
 			new_m['text'] = base64.urlsafe_b64decode(str(p['body']['data'])).split('\r\n\r\nOn')[0]
 		elif 'html' in p['mimeType']:
 			new_m['html'] = base64.urlsafe_b64decode(str(p['body']['data']))
@@ -225,7 +270,8 @@ def getThreads(access_token, date = None):
 	threads = []
 	num = 10
 	url = 'https://www.googleapis.com/gmail/v1/users/me/threads'
-	if date: url += '?q="newer:'+datetime.strftime(date-timedelta(hours=24), "%Y/%m/%d")
+	hours = str(int(math.ceil((datetime.utcnow()-date).total_seconds()/3600.)))
+	if date: url += '?q=newer_than:%sh'%(hours)
 	response = requests.get(url, headers = headers).json()
 	if 'threads' in response:
 		threads += response['threads']

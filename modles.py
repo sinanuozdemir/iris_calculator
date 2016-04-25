@@ -45,10 +45,9 @@ def checkForReplies(app_unique_id, app_id, user_email, thread, access_token, app
 		for a in thread_emails:
 			if a.legion_cadence_id: legion_cadence = a.legion_cadence_id
 			if a.legion_template_id: legion_template = a.legion_template_id
-		# print thread, sent_through_latracking, legion_cadence, legion_template
 		messages = googleAPI.getThreadMessages(thread.unique_thread_id, access_token)
 		if len(messages) == len(thread_emails):
-			# print  "no new messages"
+			print  "no new messages"
 			return None
 		for message in messages:
 			try:
@@ -60,6 +59,7 @@ def checkForReplies(app_unique_id, app_id, user_email, thread, access_token, app
 			g['inbox_id'] = app_unique_id
 			if len(thread.emails) > 0:
 				g['replied_to'] = sorted(thread.emails, key = lambda x: x.date_sent)[-1].id
+				
 			elif g['auto_reply']: #  "IS AN AUTOREPLY"
 				email = None
 				try: email = sorted(db.session.query(models.Email).filter_by(from_address=g['to_address'], to_address=g['from_address']).all(), key=lambda x:x.date_sent)[-1]
@@ -85,8 +85,11 @@ def checkForReplies(app_unique_id, app_id, user_email, thread, access_token, app
 
 
 			email_in_db, email_created = modules.get_or_create(models.Email, google_message_id=g['google_message_id'], defaults = g)
-			if email_created and g.get('to_address', '').lower() == user_email.lower() and g.get('text') and g.get('from_address'):
-				text_to_respond_to = g['text']
+			if email_created and g.get('to_address', '').lower() == user_email.lower() and g.get('from_address'):
+				if 'without_signature' in g:
+					text_to_respond_to = g['without_signature']
+				elif 'text' in g:
+					text_to_respond_to = g['text']
 				from_address = g['from_address']
 				email_id = email_in_db.id
 		return text_to_respond_to
@@ -222,7 +225,7 @@ def handleApp(appid = None):
 			print ee, "check_for_replies_error"
 			last_text = None
 			continue
-
+		# return
 		if not _thread.already_tagged and last_text and 'auto_tag' in app_settings:
 			if app_settings['auto_tag'] == 'all' \
 			or legion_cadence in app_settings['auto_tag'].get('cadences', []) \
@@ -249,7 +252,6 @@ def handleApp(appid = None):
 				data['appid'] = appid
 				data['threadID'] = _thread.unique_thread_id
 				data['replied_to'] = last_email.id
-				print "auto replying to it", data
 				sendEmailFromController(data)
 
 
