@@ -237,6 +237,7 @@ def handleApp(appid = None):
 				prediction = t.predict(last_text, how='bayes')
 				if prediction and 'overall_single_prediction' in prediction:
 					googleAPI.addLabelToThread(access_token, _thread.unique_thread_id, prediction['overall_single_prediction'])
+					_thread.origin = prediction['overall_single_prediction']
 				_thread.already_tagged = True
 				db.session.commit()
 
