@@ -89,6 +89,7 @@ class Thread(db.Model):
 	emails = relationship('Email', backref='thread')
 	threadid = db.Column(db.String(64), index=True, unique=True)
 	origin = db.Column(db.String(128), index=True)
+	tag = db.Column(db.String(128), index=True)
 	unique_thread_id = db.Column(db.String(128), index=True) # the google/outlook thread id
 	all_parties_replied = db.Column(db.Boolean, index=False, default=False)
 	latracking_reply = db.Column(db.Boolean, index=False, default=False)
